@@ -104,19 +104,19 @@ export function TurbineMap({ turbines }: TurbineMapProps) {
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <div className="text-muted-foreground">Health</div>
-                        <div className="font-medium">{turbine.health_score.toFixed(1)}%</div>
+                        <div className="font-medium">{Number(turbine.health_score ?? 0).toFixed(1)}%</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Power</div>
-                        <div className="font-medium">{turbine.latest_values.power_kw?.toFixed(0) || "0"} kW</div>
+                        <div className="font-medium">{Number(turbine.latest_values.power_kw ?? 0).toFixed(0)} kW</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">RPM</div>
-                        <div className="font-medium">{turbine.latest_values.rotor_speed_rpm?.toFixed(1) || "0"}</div>
+                        <div className="font-medium">{Number(turbine.latest_values.rotor_speed_rpm ?? 0).toFixed(1)}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Capacity</div>
-                        <div className="font-medium">{turbine.capacity_kw?.toFixed(0) || "N/A"} kW</div>
+                        <div className="font-medium">{Number(turbine.capacity_kw ?? 2000).toFixed(0)} kW</div>
                       </div>
                     </div>
                   </div>
@@ -140,19 +140,19 @@ export function TurbineMap({ turbines }: TurbineMapProps) {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <div className="text-muted-foreground">Health Score</div>
-                    <div className="text-xl font-bold">{turbine.health_score.toFixed(1)}%</div>
+                    <div className="text-xl font-bold">{Number(turbine.health_score ?? 0).toFixed(1)}%</div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Current Power</div>
-                    <div className="text-xl font-bold">{turbine.latest_values.power_kw?.toFixed(0) || "0"} kW</div>
+                    <div className="text-xl font-bold">{Number(turbine.latest_values.power_kw ?? 0).toFixed(0)} kW</div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Rotor Speed</div>
-                    <div className="text-xl font-bold">{turbine.latest_values.rotor_speed_rpm?.toFixed(1) || "0"} rpm</div>
+                    <div className="text-xl font-bold">{Number(turbine.latest_values.rotor_speed_rpm ?? 0).toFixed(1)} rpm</div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Capacity</div>
-                    <div className="text-xl font-bold">{turbine.capacity_kw?.toFixed(0) || "N/A"} kW</div>
+                    <div className="text-xl font-bold">{Number(turbine.capacity_kw ?? 2000).toFixed(0)} kW</div>
                   </div>
                 </div>
                 <div>
@@ -189,25 +189,25 @@ export function TurbineMap({ turbines }: TurbineMapProps) {
               <div>
                 <div className="text-sm font-medium">Health Score</div>
                 <div className="text-2xl font-bold">
-                  {selectedTurbineData.health_score.toFixed(1)}%
+                  {Number(selectedTurbineData.health_score ?? 0).toFixed(1)}%
                 </div>
               </div>
               <div>
                 <div className="text-sm font-medium">Current Power</div>
                 <div className="text-xl">
-                  {selectedTurbineData.latest_values.power_kw?.toFixed(0) || "0"} kW
+                  {Number(selectedTurbineData.latest_values.power_kw ?? 0).toFixed(0)} kW
                 </div>
               </div>
               <div>
                 <div className="text-sm font-medium">Rotor Speed</div>
                 <div className="text-xl">
-                  {selectedTurbineData.latest_values.rotor_speed_rpm?.toFixed(1) || "0"} rpm
+                  {Number(selectedTurbineData.latest_values.rotor_speed_rpm ?? 0).toFixed(1)} rpm
                 </div>
               </div>
               <div>
                 <div className="text-sm font-medium">Capacity</div>
                 <div className="text-xl">
-                  {selectedTurbineData.capacity_kw?.toFixed(0) || "N/A"} kW
+                  {Number(selectedTurbineData.capacity_kw ?? 2000).toFixed(0)} kW
                 </div>
               </div>
               <div>

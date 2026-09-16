@@ -302,8 +302,7 @@ export function AlertsList({
                   {/* Checkbox */}
                   <Checkbox
                     checked={selectedAlertIds.includes(alert.id)}
-                    onCheckedChange={(e) => {
-                      e.stopPropagation();
+                    onCheckedChange={() => {
                       toggleAlertSelection(alert.id);
                     }}
                     onClick={(e) => e.stopPropagation()}

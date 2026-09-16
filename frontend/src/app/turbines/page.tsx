@@ -130,7 +130,7 @@ export default function TurbinesPage() {
                   </CardTitle>
                   <Badge
                     variant="outline"
-                    className={`${statusColors[turbine.status]} text-white border-0 flex items-center gap-1.5`}
+                    className={`${statusColors[turbine.status as keyof typeof statusColors] || "bg-slate-400"} text-white border-0 flex items-center gap-1.5`}
                   >
                     <span className="h-2 w-2 rounded-full bg-white" />
                     {turbine.status.charAt(0).toUpperCase() + turbine.status.slice(1)}
@@ -142,14 +142,14 @@ export default function TurbinesPage() {
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Power Output</div>
                     <div className="text-2xl font-bold flex items-center gap-1">
-                      {turbine.latest_values.power_kw?.toFixed(0) || "0"}
+                      {Number(turbine.latest_values.power_kw ?? 0).toFixed(0)}
                       <span className="text-sm font-normal text-muted-foreground">kW</span>
                     </div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Health Score</div>
                     <div className="text-2xl font-bold flex items-center gap-1">
-                      {turbine.health_score.toFixed(1)}
+                      {Number(turbine.health_score ?? 0).toFixed(1)}
                       <span className="text-sm font-normal text-muted-foreground">%</span>
                     </div>
                   </div>
@@ -160,7 +160,7 @@ export default function TurbinesPage() {
                     <span className="text-muted-foreground">Rotor Speed</span>
                     <span className="font-medium flex items-center gap-1">
                       <Gauge className="h-3 w-3" />
-                      {turbine.latest_values.rotor_speed_rpm?.toFixed(1) || "0"} RPM
+                      {Number(turbine.latest_values.rotor_speed_rpm ?? 0).toFixed(1)} RPM
                     </span>
                   </div>
                   <Progress value={turbine.health_score} className="h-2" />
@@ -168,7 +168,7 @@ export default function TurbinesPage() {
 
                 <div className="flex items-center justify-between pt-2 border-t">
                   <span className="text-sm text-muted-foreground">
-                    Capacity: {turbine.capacity_kw?.toFixed(0) || "2000"} kW
+                    Capacity: {Number(turbine.capacity_kw ?? 2000).toFixed(0)} kW
                   </span>
                   <Button variant="ghost" size="sm" className="gap-1">
                     View Details
@@ -220,12 +220,12 @@ export default function TurbinesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {turbine.latest_values.power_kw?.toFixed(0) || "0"} / {turbine.capacity_kw?.toFixed(0) || "2000"}
+                      {Number(turbine.latest_values.power_kw ?? 0).toFixed(0)} / {Number(turbine.capacity_kw ?? 2000).toFixed(0)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Progress value={turbine.health_score} className="h-2 w-20" />
-                        <span className="text-sm">{turbine.health_score.toFixed(1)}%</span>
+                        <span className="text-sm">{Number(turbine.health_score ?? 0).toFixed(1)}%</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">

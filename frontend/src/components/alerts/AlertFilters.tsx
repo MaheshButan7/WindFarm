@@ -333,7 +333,10 @@ export function AlertFilters({ alerts, filters, onFiltersChange, onReset }: Aler
                       selected={filters.dateRange?.start || undefined}
                       onSelect={(date) =>
                         onFiltersChange({
-                          dateRange: { ...filters.dateRange, start: date || null },
+                          dateRange: {
+                            start: date || null,
+                            end: filters.dateRange?.end || null,
+                          },
                         })
                       }
                       initialFocus
@@ -363,7 +366,10 @@ export function AlertFilters({ alerts, filters, onFiltersChange, onReset }: Aler
                       selected={filters.dateRange?.end || undefined}
                       onSelect={(date) =>
                         onFiltersChange({
-                          dateRange: { ...filters.dateRange, end: date || null },
+                          dateRange: {
+                            start: filters.dateRange?.start || null,
+                            end: date || null,
+                          },
                         })
                       }
                       initialFocus

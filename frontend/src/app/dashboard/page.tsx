@@ -902,12 +902,12 @@ export default function DashboardPage() {
                   <XAxis 
                     dataKey="time" 
                     tick={{ fontSize: 12 }}
-                    tickFormatter={(time) => new Date(time).toLocaleDateString()}
+                    tickFormatter={(time: any) => time ? new Date(time).toLocaleDateString() : ''}
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <RechartsTooltip 
                     contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    labelFormatter={(time) => new Date(time).toLocaleString()}
+                    labelFormatter={(time: any) => time ? new Date(time).toLocaleString() : ''}
                   />
                   <Area
                     type="monotone"
@@ -934,12 +934,12 @@ export default function DashboardPage() {
                   <XAxis 
                     dataKey="time"
                     tick={{ fontSize: 12 }}
-                    tickFormatter={(time) => new Date(time).toLocaleDateString()}
+                    tickFormatter={(time: any) => time ? new Date(time).toLocaleDateString() : ''}
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <RechartsTooltip 
                     contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    labelFormatter={(time) => new Date(time).toLocaleString()}
+                    labelFormatter={(time: any) => time ? new Date(time).toLocaleString() : ''}
                   />
                   <Line
                     type="monotone"
@@ -966,12 +966,12 @@ export default function DashboardPage() {
                   <XAxis 
                     dataKey="time"
                     tick={{ fontSize: 12 }}
-                    tickFormatter={(time) => new Date(time).toLocaleDateString()}
+                    tickFormatter={(time: any) => time ? new Date(time).toLocaleDateString() : ''}
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <RechartsTooltip 
                     contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    labelFormatter={(time) => new Date(time).toLocaleString()}
+                    labelFormatter={(time: any) => time ? new Date(time).toLocaleString() : ''}
                   />
                   <Line
                     type="monotone"

@@ -570,11 +570,11 @@ export function LiveTab({ turbine, timeseries }: LiveTabProps) {
                 <XAxis
                   dataKey="time"
                   tick={{ fontSize: 10 }}
-                  tickFormatter={(time) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  tickFormatter={(time: any) => time ? new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <RechartsTooltip
-                  labelFormatter={(time) => new Date(time).toLocaleTimeString()}
+                  labelFormatter={(time: any) => time ? new Date(time).toLocaleTimeString() : ''}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Line
@@ -602,11 +602,11 @@ export function LiveTab({ turbine, timeseries }: LiveTabProps) {
                 <XAxis
                   dataKey="time"
                   tick={{ fontSize: 10 }}
-                  tickFormatter={(time) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  tickFormatter={(time: any) => time ? new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <RechartsTooltip
-                  labelFormatter={(time) => new Date(time).toLocaleTimeString()}
+                  labelFormatter={(time: any) => time ? new Date(time).toLocaleTimeString() : ''}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Line
@@ -634,11 +634,11 @@ export function LiveTab({ turbine, timeseries }: LiveTabProps) {
                 <XAxis
                   dataKey="time"
                   tick={{ fontSize: 10 }}
-                  tickFormatter={(time) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  tickFormatter={(time: any) => time ? new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <RechartsTooltip
-                  labelFormatter={(time) => new Date(time).toLocaleTimeString()}
+                  labelFormatter={(time: any) => time ? new Date(time).toLocaleTimeString() : ''}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Line
@@ -682,11 +682,11 @@ export function LiveTab({ turbine, timeseries }: LiveTabProps) {
                 <XAxis
                   dataKey="time"
                   tick={{ fontSize: 10 }}
-                  tickFormatter={(time) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  tickFormatter={(time: any) => time ? new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <RechartsTooltip
-                  labelFormatter={(time) => new Date(time).toLocaleTimeString()}
+                  labelFormatter={(time: any) => time ? new Date(time).toLocaleTimeString() : ''}
                   contentStyle={{ fontSize: 12 }}
                 />
                 <Line

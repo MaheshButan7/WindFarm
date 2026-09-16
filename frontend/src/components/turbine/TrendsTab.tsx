@@ -227,12 +227,12 @@ export function TrendsTab({ turbine, timeseries }: TrendsTabProps) {
               <XAxis
                 dataKey="time"
                 tick={{ fontSize: 12 }}
-                tickFormatter={(time) => format(new Date(time), "MMM d HH:mm")}
+                tickFormatter={(time: any) => time ? format(new Date(time), "MMM d HH:mm") : ''}
               />
               <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
               <RechartsTooltip
-                labelFormatter={(time) => format(new Date(time), "MMM d, yyyy HH:mm")}
+                labelFormatter={(time: any) => time ? format(new Date(time), "MMM d, yyyy HH:mm") : ''}
                 contentStyle={{ fontSize: 12 }}
               />
               <Legend />
@@ -306,11 +306,11 @@ export function TrendsTab({ turbine, timeseries }: TrendsTabProps) {
               <XAxis
                 dataKey="time"
                 tick={{ fontSize: 12 }}
-                tickFormatter={(time) => format(new Date(time), "MMM d HH:mm")}
+                tickFormatter={(time: any) => time ? format(new Date(time), "MMM d HH:mm") : ''}
               />
               <YAxis tick={{ fontSize: 12 }} />
               <RechartsTooltip
-                labelFormatter={(time) => format(new Date(time), "MMM d, yyyy HH:mm")}
+                labelFormatter={(time: any) => time ? format(new Date(time), "MMM d, yyyy HH:mm") : ''}
                 contentStyle={{ fontSize: 12 }}
               />
               <Legend />

@@ -288,11 +288,11 @@ export function AlertDetailDialog({
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="time"
-                        tickFormatter={(time) => format(new Date(time), "HH:mm")}
+                        tickFormatter={(time: any) => time ? format(new Date(time), "HH:mm") : ''}
                       />
                       <YAxis />
                       <RechartsTooltip
-                        labelFormatter={(time) => format(new Date(time), "PPP p")}
+                        labelFormatter={(time: any) => time ? format(new Date(time), "PPP p") : ''}
                       />
                       <ReferenceLine
                         y={alert.thresholdValue}

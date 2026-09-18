@@ -1,18 +1,20 @@
 """
 Wind Turbine Monitoring Backend
-Flask app with REST API, WebSocket, and data processing
+FastAPI app with REST API, ASGI Socket.IO, and data processing
 """
 import os
-import time
+import sys
+import asyncio
 import threading
 from datetime import datetime, timedelta, timezone
 from collections import deque
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
+from contextlib import asynccontextmanager
 
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from fastapi import FastAPI, Header, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
+import socketio
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 
@@ -25,13 +27,13 @@ except ImportError:
 
 load_dotenv()
 
-app = Flask(__name__)
-CORS(app, origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(","))
-socketio = SocketIO(app, cors_allowed_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(","))
-
 INGEST_TOKEN = os.getenv("INGEST_TOKEN", "dev-token-change-in-production")
 PORT = int(os.getenv("PORT", "8000"))
 OPENAI_KEY = os.getenv("OPENAI_KEY", "")
+raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+if not allowed_origins:
+    allowed_origins = ["*"]
 
 # Initialize OpenAI client if available
 openai_client = None
@@ -105,14 +107,14 @@ class TurbineState:
     last_update: Optional[datetime] = None
     health_score: float = 100.0
     status: str = "unknown"  # "online", "offline", "warning", "critical"
-    
+
     # Metadata
     capacity_kw: Optional[float] = None
     generator_type: Optional[str] = None
     blade_length_m: Optional[float] = None
     height_m: Optional[float] = None
     limits: Optional[Limits] = None
-    
+
     # Raw signal buffers (ring buffers)
     vibration_rms_mm_s: deque = field(default_factory=lambda: deque(maxlen=7200))  # 2h @ 1s
     rotor_speed_rpm: deque = field(default_factory=lambda: deque(maxlen=1800))  # 1h @ 2s
@@ -128,15 +130,15 @@ class TurbineState:
     ambient_temp_c: deque = field(default_factory=lambda: deque(maxlen=60))  # 1h @ 60s
     humidity_pct: deque = field(default_factory=lambda: deque(maxlen=60))
     grid_status: deque = field(default_factory=lambda: deque(maxlen=3600))  # 5h @ 5s
-    
+
     # Timestamp buffers
     timestamps: deque = field(default_factory=lambda: deque(maxlen=7200))
-    
+
     # Aggregates (1-min, 15-min, hourly)
     aggregates_1min: deque = field(default_factory=lambda: deque(maxlen=1440))  # 24h
     aggregates_15min: deque = field(default_factory=lambda: deque(maxlen=672))  # 7 days
     aggregates_hourly: deque = field(default_factory=lambda: deque(maxlen=720))  # 30 days
-    
+
     # Risk scores
     component_risks: Dict[str, float] = field(default_factory=lambda: {
         "gearbox": 0.0,
@@ -145,7 +147,7 @@ class TurbineState:
         "bearings": 0.0,
         "power_panel": 0.0
     })
-    
+
     # RUL (Remaining Useful Life)
     rul: Dict[str, Dict[str, float]] = field(default_factory=lambda: {
         "gearbox": {"value": 365.0, "confidence": 0.85},
@@ -160,6 +162,12 @@ class TurbineState:
 turbines: Dict[str, TurbineState] = {}
 connected_clients = set()
 
+# Initialize Socket.IO AsyncServer
+sio = socketio.AsyncServer(
+    async_mode="asgi",
+    cors_allowed_origins="*" if "*" in allowed_origins else allowed_origins
+)
+
 
 # Helper functions
 def get_or_create_turbine(turbine_id: str) -> TurbineState:
@@ -171,7 +179,6 @@ def get_or_create_turbine(turbine_id: str) -> TurbineState:
 def parse_rfc3339(ts_str: str) -> datetime:
     """Parse RFC3339 timestamp"""
     try:
-        # Handle Zulu time
         if ts_str.endswith("Z"):
             ts_str = ts_str[:-1] + "+00:00"
         return datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
@@ -190,7 +197,7 @@ def get_latest_value(buffer: deque):
 def get_latest_values(turbine: TurbineState) -> Dict[str, Any]:
     """Extract all latest values from turbine state"""
     latest_values = {}
-    
+
     # Power and mechanical signals
     latest = get_latest_value(turbine.power_kw)
     if latest is not None:
@@ -201,7 +208,7 @@ def get_latest_values(turbine: TurbineState) -> Dict[str, Any]:
     latest = get_latest_value(turbine.vibration_rms_mm_s)
     if latest is not None:
         latest_values["vibration_rms_mm_s"] = latest
-    
+
     # Wind and environmental signals
     latest = get_latest_value(turbine.wind_speed_ms)
     if latest is not None:
@@ -215,7 +222,7 @@ def get_latest_values(turbine: TurbineState) -> Dict[str, Any]:
     latest = get_latest_value(turbine.humidity_pct)
     if latest is not None:
         latest_values["humidity_pct"] = latest
-    
+
     # Operational signals
     latest = get_latest_value(turbine.yaw_deg)
     if latest is not None:
@@ -229,7 +236,7 @@ def get_latest_values(turbine: TurbineState) -> Dict[str, Any]:
     latest = get_latest_value(turbine.pitch_deg_C)
     if latest is not None:
         latest_values["pitch_deg_C"] = latest
-    
+
     # Thermal signals
     latest = get_latest_value(turbine.gearbox_oil_temp_c)
     if latest is not None:
@@ -237,21 +244,20 @@ def get_latest_values(turbine: TurbineState) -> Dict[str, Any]:
     latest = get_latest_value(turbine.generator_winding_temp_c)
     if latest is not None:
         latest_values["generator_winding_temp_c"] = latest
-    
+
     # Grid status (string, not numeric)
     latest = get_latest_value(turbine.grid_status)
     if latest is not None:
         latest_values["grid_status"] = latest
-    
+
     return latest_values
 
 
 def generate_ai_text(prompt: str, max_tokens: int = 200) -> str:
     """Generate AI text using OpenAI API"""
     if not openai_client:
-        # Fallback to simple template-based responses
         return f"Analysis: {prompt[:100]}... Based on the data provided, this requires further investigation."
-    
+
     try:
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -264,14 +270,14 @@ def generate_ai_text(prompt: str, max_tokens: int = 200) -> str:
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        app.logger.error(f"OpenAI API error: {e}")
+        print(f"OpenAI API error: {e}")
         return f"Analysis: {prompt[:100]}... Based on the data provided, this requires further investigation."
 
 
 def check_anomalies(turbine: TurbineState, signals: SignalData, ts: datetime):
     """Check for anomalies and generate alerts"""
     alerts = []
-    
+
     if turbine.limits:
         # Vibration check
         if signals.vibration_rms_mm_s is not None and turbine.limits.vibration_rms_mm_s:
@@ -305,7 +311,7 @@ def check_anomalies(turbine: TurbineState, signals: SignalData, ts: datetime):
                         "alarm": alarm
                     }
                 })
-        
+
         # Gearbox temperature check
         if signals.gearbox_oil_temp_c is not None and turbine.limits.gearbox_oil_temp_c:
             warn = turbine.limits.gearbox_oil_temp_c.get("warn")
@@ -324,7 +330,7 @@ def check_anomalies(turbine: TurbineState, signals: SignalData, ts: datetime):
                         "alarm": alarm
                     }
                 })
-        
+
         # Generator temperature check
         if signals.generator_winding_temp_c is not None and turbine.limits.generator_winding_temp_c:
             warn = turbine.limits.generator_winding_temp_c.get("warn")
@@ -343,7 +349,7 @@ def check_anomalies(turbine: TurbineState, signals: SignalData, ts: datetime):
                         "alarm": alarm
                     }
                 })
-    
+
     # Grid status change check
     if signals.grid_status:
         if turbine.grid_status and len(turbine.grid_status) > 0:
@@ -361,38 +367,319 @@ def check_anomalies(turbine: TurbineState, signals: SignalData, ts: datetime):
                         "current_status": signals.grid_status
                     }
                 })
-    
+
     return alerts
 
 
-# API Routes
-@app.route("/api/ingest", methods=["POST"])
-def ingest():
-    """Accept simulator data"""
-    # Check authorization
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return jsonify({"error": "Missing or invalid authorization"}), 401
-    
-    token = auth_header.split("Bearer ")[1]
-    if token != INGEST_TOKEN:
-        return jsonify({"error": "Invalid token"}), 401
-    
+# WebSocket Event Handlers
+@sio.event
+async def connect(sid, environ):
+    """Handle WebSocket connection"""
+    connected_clients.add(sid)
+    print(f"Client connected: {sid}")
+
+
+@sio.event
+async def disconnect(sid):
+    """Handle WebSocket disconnection"""
+    connected_clients.discard(sid)
+    print(f"Client disconnected: {sid}")
+
+
+@sio.event
+async def subscribe(sid, data):
+    """Handle subscription request"""
+    await sio.emit("message", {"type": "subscribed", "turbine_ids": data.get("turbine_ids", [])}, to=sid)
+
+
+# Background Tasks
+async def compute_rolling_metrics_task():
+    """Every 10s: compute rolling metrics for fast signals"""
+    while True:
+        try:
+            for turbine in turbines.values():
+                if len(turbine.vibration_rms_mm_s) > 10:
+                    recent_vib = [v for _, v in list(turbine.vibration_rms_mm_s)[-10:]]
+                    avg_vib = sum(recent_vib) / len(recent_vib)
+
+                if len(turbine.rotor_speed_rpm) > 5:
+                    recent_rpm = [v for _, v in list(turbine.rotor_speed_rpm)[-5:]]
+                    avg_rpm = sum(recent_rpm) / len(recent_rpm)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Error in rolling metrics: {e}")
+        await asyncio.sleep(10)
+
+
+async def compute_aggregates_task():
+    """Every 1min: compute aggregates + health score"""
+    while True:
+        try:
+            now = datetime.now(timezone.utc)
+            cutoff_1min = now - timedelta(minutes=1)
+
+            for turbine in turbines.values():
+                agg = {}
+                if turbine.power_kw:
+                    recent_power = [(ts, v) for ts, v in turbine.power_kw if ts >= cutoff_1min]
+                    if recent_power:
+                        values = [v for _, v in recent_power]
+                        agg["power_kw"] = {
+                            "min": min(values),
+                            "max": max(values),
+                            "avg": sum(values) / len(values)
+                        }
+
+                if turbine.vibration_rms_mm_s:
+                    recent_vib = [(ts, v) for ts, v in turbine.vibration_rms_mm_s if ts >= cutoff_1min]
+                    if recent_vib:
+                        values = [v for _, v in recent_vib]
+                        agg["vibration_rms_mm_s"] = {
+                            "min": min(values),
+                            "max": max(values),
+                            "avg": sum(values) / len(values)
+                        }
+
+                if agg:
+                    turbine.aggregates_1min.append((now, agg))
+
+                # Compute health score
+                health_factors = []
+                if turbine.limits and turbine.limits.vibration_rms_mm_s:
+                    if turbine.vibration_rms_mm_s:
+                        latest_vib = turbine.vibration_rms_mm_s[-1][1]
+                        warn = turbine.limits.vibration_rms_mm_s.get("warn", 0)
+                        if latest_vib < warn:
+                            health_factors.append(1.0)
+                        elif latest_vib < turbine.limits.vibration_rms_mm_s.get("alarm", warn * 1.5):
+                            health_factors.append(0.7)
+                        else:
+                            health_factors.append(0.3)
+
+                if health_factors:
+                    turbine.health_score = sum(health_factors) / len(health_factors) * 100
+                else:
+                    turbine.health_score = 100.0
+
+                # Update status based on health
+                if turbine.health_score >= 90:
+                    turbine.status = "online"
+                elif turbine.health_score >= 70:
+                    turbine.status = "warning"
+                else:
+                    turbine.status = "critical"
+
+                # Broadcast aggregate update
+                await sio.emit("message", {
+                    "type": "agg",
+                    "turbine_id": turbine.turbine_id,
+                    "ts": now.isoformat().replace("+00:00", "Z"),
+                    "aggregates": agg,
+                    "health_score": turbine.health_score
+                })
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Error in aggregates: {e}")
+        await asyncio.sleep(60)
+
+
+async def compute_risk_scores_task():
+    """Every 5min: compute risk scores"""
+    while True:
+        try:
+            for turbine in turbines.values():
+                risks = {}
+
+                # Gearbox risk
+                if turbine.vibration_rms_mm_s and turbine.limits and turbine.limits.vibration_rms_mm_s:
+                    latest_vib = turbine.vibration_rms_mm_s[-1][1]
+                    warn = turbine.limits.vibration_rms_mm_s.get("warn", 7)
+                    alarm = turbine.limits.vibration_rms_mm_s.get("alarm", 10)
+                    if latest_vib >= alarm:
+                        risks["gearbox"] = 90.0
+                    elif latest_vib >= warn:
+                        risks["gearbox"] = 50.0 + (latest_vib - warn) / (alarm - warn) * 40
+                    else:
+                        risks["gearbox"] = (latest_vib / warn) * 50
+                else:
+                    risks["gearbox"] = 0.0
+
+                # Generator risk
+                if turbine.generator_winding_temp_c and turbine.limits and turbine.limits.generator_winding_temp_c:
+                    latest_temp = turbine.generator_winding_temp_c[-1][1]
+                    warn = turbine.limits.generator_winding_temp_c.get("warn", 95)
+                    alarm = turbine.limits.generator_winding_temp_c.get("alarm", 110)
+                    if latest_temp >= alarm:
+                        risks["generator"] = 90.0
+                    elif latest_temp >= warn:
+                        risks["generator"] = 50.0 + (latest_temp - warn) / (alarm - warn) * 40
+                    else:
+                        risks["generator"] = (latest_temp / warn) * 50
+                else:
+                    risks["generator"] = 0.0
+
+                # Simple risk for other components
+                risks["blades"] = risks.get("gearbox", 0) * 0.7
+                risks["bearings"] = risks.get("gearbox", 0) * 0.9
+                risks["power_panel"] = 0.0
+
+                turbine.component_risks = risks
+
+                # Update RUL based on risks
+                for component in risks:
+                    if component in turbine.rul:
+                        risk = risks[component]
+                        turbine.rul[component]["value"] = max(0, turbine.rul[component]["value"] - (risk / 100) * 0.083)
+                        turbine.rul[component]["confidence"] = max(0.5, 1.0 - (risk / 100) * 0.3)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Error in risk scores: {e}")
+        await asyncio.sleep(300)
+
+
+async def refresh_forecasts_task():
+    """Every 15min: refresh short-term forecast; Every 6h: long-term"""
+    short_term_counter = 0
+    while True:
+        try:
+            now = datetime.now(timezone.utc)
+            short_term_counter += 1
+
+            for turbine in turbines.values():
+                if turbine.wind_speed_ms and len(turbine.wind_speed_ms) > 10:
+                    recent_wind = [v for _, v in list(turbine.wind_speed_ms)[-10:]]
+                    avg_wind = sum(recent_wind) / len(recent_wind)
+                    forecast_power = min(turbine.capacity_kw or 2000, avg_wind ** 3 * 0.1) if turbine.capacity_kw else avg_wind ** 3 * 0.1
+
+                    await sio.emit("message", {
+                        "type": "forecast",
+                        "turbine_id": turbine.turbine_id,
+                        "ts": now.isoformat().replace("+00:00", "Z"),
+                        "forecast_type": "short_term",
+                        "predicted_power_kw": forecast_power
+                    })
+
+            if short_term_counter >= 24:
+                short_term_counter = 0
+                for turbine in turbines.values():
+                    await sio.emit("message", {
+                        "type": "forecast",
+                        "turbine_id": turbine.turbine_id,
+                        "ts": now.isoformat().replace("+00:00", "Z"),
+                        "forecast_type": "long_term",
+                        "predicted_power_kw": turbine.capacity_kw * 0.7 if turbine.capacity_kw else 1400
+                    })
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"Error in forecasts: {e}")
+        await asyncio.sleep(900)
+
+
+ENABLE_SIMULATOR = os.getenv("ENABLE_SIMULATOR", "false").lower() in ("true", "1", "yes")
+
+
+def run_internal_simulator():
+    """Run the simulator in a background thread if enabled"""
     try:
-        payload = IngestPayload(**request.json)
+        if "--url" not in sys.argv:
+            sys.argv.extend(["--url", f"http://127.0.0.1:{PORT}"])
+        if "--token" not in sys.argv:
+            sys.argv.extend(["--token", INGEST_TOKEN])
+
+        from simulate import main as run_simulator
+        print("Starting internal turbine simulator thread...")
+        run_simulator()
     except Exception as e:
-        return jsonify({"error": f"Invalid payload: {str(e)}"}), 400
-    
+        print(f"Error starting internal simulator: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """FastAPI Lifespan for managing background tasks and resources"""
+    print(f"Wind Turbine Backend starting on port {PORT}...")
+    tasks = [
+        asyncio.create_task(compute_rolling_metrics_task()),
+        asyncio.create_task(compute_aggregates_task()),
+        asyncio.create_task(compute_risk_scores_task()),
+        asyncio.create_task(refresh_forecasts_task())
+    ]
+    if ENABLE_SIMULATOR:
+        sim_thread = threading.Thread(target=run_internal_simulator, daemon=True)
+        sim_thread.start()
+
+    yield
+
+    print("Shutting down background tasks...")
+    for t in tasks:
+        t.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+
+# Initialize FastAPI Application
+app = FastAPI(
+    title="Wind Turbine Monitoring API",
+    description="FastAPI backend for wind turbine telemetry, analytics, and alerts",
+    version="2.0.0",
+    lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins if allowed_origins != ["*"] else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends
+
+security = HTTPBearer(auto_error=False)
+
+def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Validate Bearer token from request Authorization header"""
+    if not credentials or credentials.credentials != INGEST_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid authorization"
+        )
+    return credentials.credentials
+
+
+# REST API Endpoints
+@app.get("/health")
+@app.get("/")
+async def health_check():
+    """Health check endpoint for Railway and load balancers"""
+    return {
+        "status": "ok",
+        "service": "wind-turbine-backend",
+        "turbines_count": len(turbines)
+    }
+
+
+@app.post(
+    "/api/ingest",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(verify_token)]
+)
+async def ingest(payload: IngestPayload):
+    """Accept simulator data"""
     turbine = get_or_create_turbine(payload.turbine_id)
-    
+
     # Validate sequence number
     if payload.seq <= turbine.last_seq:
-        return jsonify({"error": "Out of order sequence number"}), 400
-    
+        raise HTTPException(status_code=400, detail="Out of order sequence number")
+
     turbine.last_seq = payload.seq
     ts = parse_rfc3339(payload.ts)
     turbine.last_update = ts
-    
+
     # Store signals in buffers
     if payload.signals.vibration_rms_mm_s is not None:
         turbine.vibration_rms_mm_s.append((ts, payload.signals.vibration_rms_mm_s))
@@ -420,9 +707,9 @@ def ingest():
         turbine.humidity_pct.append((ts, payload.signals.humidity_pct))
     if payload.signals.grid_status:
         turbine.grid_status.append((ts, payload.signals.grid_status))
-    
+
     turbine.timestamps.append(ts)
-    
+
     # Update metadata if provided
     if payload.meta:
         if payload.meta.capacity_kw is not None:
@@ -435,14 +722,14 @@ def ingest():
             turbine.height_m = payload.meta.height_m
         if payload.meta.limits:
             turbine.limits = payload.meta.limits
-    
+
     # Check for anomalies
     alerts = check_anomalies(turbine, payload.signals, ts)
-    
+
     # Broadcast alerts via WebSocket
     for alert in alerts:
-        socketio.emit("message", alert)
-    
+        await sio.emit("message", alert)
+
     # Broadcast tick update
     tick_data = {
         "type": "tick",
@@ -455,89 +742,86 @@ def ingest():
     }
     if payload.signals.pitch_deg:
         tick_data["signals"]["pitch_deg"] = payload.signals.pitch_deg.model_dump()
-    
-    socketio.emit("message", tick_data)
-    
-    return jsonify({
+
+    await sio.emit("message", tick_data)
+
+    return {
         "received": True,
         "turbine_id": payload.turbine_id,
         "seq": payload.seq
-    }), 202
+    }
 
 
-@app.route("/api/turbine/<turbine_id>/analytics", methods=["GET"])
-def turbine_analytics(turbine_id: str):
+@app.get("/api/turbine/{turbine_id}/analytics")
+async def turbine_analytics(turbine_id: str):
     """Return detailed analytics for a specific turbine"""
     if turbine_id not in turbines:
-        return jsonify({"error": "Turbine not found"}), 404
-    
+        raise HTTPException(status_code=404, detail="Turbine not found")
+
     turbine = turbines[turbine_id]
-    
-    # Generate AI analysis for maintenance recommendations
     maintenance_recommendations = []
-    
+
     # Check gearbox condition
     if turbine.vibration_rms_mm_s and len(turbine.vibration_rms_mm_s) > 0:
         latest_vib = turbine.vibration_rms_mm_s[-1][1]
-        if latest_vib >= (turbine.limits.vibration_rms_mm_s.get("warn", 7) if turbine.limits and turbine.limits.vibration_rms_mm_s else 7):
+        warn_val = (turbine.limits.vibration_rms_mm_s.get("warn", 7) if turbine.limits and turbine.limits.vibration_rms_mm_s else 7)
+        if latest_vib >= warn_val:
             prompt = f"Turbine {turbine_id} shows elevated vibration levels ({latest_vib:.2f} mm/s). Gearbox bearing health is declining. Recommend maintenance action."
-            analysis = generate_ai_text(prompt)
+            analysis = await asyncio.to_thread(generate_ai_text, prompt)
             maintenance_recommendations.append({
                 "priority": "high",
                 "title": "Gearbox Bearing Replacement",
-                "description": f"Elevated vibration levels indicate potential bearing wear.",
+                "description": "Elevated vibration levels indicate potential bearing wear.",
                 "root_cause": analysis,
                 "cost_impact": "$45,000",
                 "action_date": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat() + "Z",
             })
-    
+
     # Check generator temperature
     if turbine.generator_winding_temp_c and len(turbine.generator_winding_temp_c) > 0:
         latest_temp = turbine.generator_winding_temp_c[-1][1]
-        if latest_temp >= (turbine.limits.generator_winding_temp_c.get("warn", 95) if turbine.limits and turbine.limits.generator_winding_temp_c else 95):
+        warn_val = (turbine.limits.generator_winding_temp_c.get("warn", 95) if turbine.limits and turbine.limits.generator_winding_temp_c else 95)
+        if latest_temp >= warn_val:
             prompt = f"Turbine {turbine_id} generator winding temperature is elevated ({latest_temp:.1f}°C). Analyze potential causes and recommend actions."
-            analysis = generate_ai_text(prompt)
+            analysis = await asyncio.to_thread(generate_ai_text, prompt)
             maintenance_recommendations.append({
                 "priority": "medium",
                 "title": "Generator Winding Inspection",
-                "description": f"Elevated generator temperature detected.",
+                "description": "Elevated generator temperature detected.",
                 "root_cause": analysis,
                 "cost_impact": "$12,000",
                 "action_date": (datetime.now(timezone.utc) + timedelta(days=45)).isoformat() + "Z",
             })
-    
-    return jsonify({
+
+    return {
         "turbine_id": turbine_id,
         "health_score": turbine.health_score,
         "component_risks": turbine.component_risks,
         "rul": turbine.rul,
         "maintenance_recommendations": maintenance_recommendations,
         "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    })
+    }
 
 
-@app.route("/api/snapshot", methods=["GET"])
-def snapshot():
+@app.get("/api/snapshot")
+async def snapshot(window: str = Query("30m")):
     """Return current dashboard state"""
     try:
-        window_str = request.args.get("window", "30m")
-        
-        # Parse window (assume minutes for now)
         try:
-            window_minutes = int(window_str.rstrip("m"))
+            window_minutes = int(window.rstrip("m"))
         except ValueError:
-            window_minutes = 30  # Default to 30 minutes on parse error
-        
+            window_minutes = 30
+
         cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
-        
+
         # Build farm KPIs
         current_power_sum = 0
         rotor_rpm_sum = 0
         valid_turbines_for_power = 0
         valid_turbines_for_rpm = 0
-        
+
         for turbine in turbines.values():
-            # Current power (only count recent data)
+            # Current power
             if turbine.power_kw:
                 latest_power = get_latest_value(turbine.power_kw)
                 if latest_power is not None:
@@ -545,7 +829,7 @@ def snapshot():
                     if ts_check >= cutoff_time:
                         current_power_sum += latest_power
                         valid_turbines_for_power += 1
-            
+
             # Rotor RPM average
             if turbine.rotor_speed_rpm:
                 latest_rpm = get_latest_value(turbine.rotor_speed_rpm)
@@ -554,20 +838,18 @@ def snapshot():
                     if ts_check >= cutoff_time:
                         rotor_rpm_sum += latest_rpm
                         valid_turbines_for_rpm += 1
-        
+
         farm_kpis = {
             "current_power_kw": current_power_sum,
             "rotor_rpm_avg": rotor_rpm_sum / valid_turbines_for_rpm if valid_turbines_for_rpm > 0 else 0,
             "farm_health_pct": sum(t.health_score for t in turbines.values()) / len(turbines) if turbines else 100.0,
             "turbines_online": sum(1 for t in turbines.values() if t.status == "online")
         }
-        
+
         turbine_list = []
         for turbine_id, turbine in turbines.items():
-            # Get latest values using helper function
             latest_values = get_latest_values(turbine)
-            
-            # Get time-series slices
+
             timeseries = {}
             for signal_name, buffer in [
                 ("vibration_rms_mm_s", turbine.vibration_rms_mm_s),
@@ -582,7 +864,7 @@ def snapshot():
                     filtered = [(ts.isoformat() + "Z", val) for ts, val in buffer if ts >= cutoff_time]
                     if filtered:
                         timeseries[signal_name] = filtered
-            
+
             turbine_list.append({
                 "turbine_id": turbine_id,
                 "status": turbine.status,
@@ -602,256 +884,27 @@ def snapshot():
                 "component_risks": turbine.component_risks,
                 "rul": turbine.rul
             })
-        
-        return jsonify({
+
+        return {
             "farm_kpis": farm_kpis,
             "turbines": turbine_list,
             "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        })
+        }
     except Exception as e:
-        app.logger.error(f"Error generating snapshot: {e}", exc_info=True)
-        return jsonify({"error": "Failed to generate snapshot"}), 500
+        print(f"Error generating snapshot: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate snapshot")
 
 
-# WebSocket
-@socketio.on("connect")
-def handle_connect():
-    """Handle WebSocket connection"""
-    connected_clients.add(request.sid)
-    print(f"Client connected: {request.sid}")
-
-
-@socketio.on("disconnect")
-def handle_disconnect():
-    """Handle WebSocket disconnection"""
-    connected_clients.discard(request.sid)
-    print(f"Client disconnected: {request.sid}")
-
-
-@socketio.on("subscribe")
-def handle_subscribe(data):
-    """Handle subscription request"""
-    emit("message", {"type": "subscribed", "turbine_ids": data.get("turbine_ids", [])})
-
-
-# Background Tasks
-def compute_rolling_metrics():
-    """Every 10s: compute rolling metrics for fast signals"""
-    while True:
-        try:
-            for turbine in turbines.values():
-                # Compute simple rolling averages for fast signals
-                if len(turbine.vibration_rms_mm_s) > 10:
-                    recent_vib = [v for _, v in list(turbine.vibration_rms_mm_s)[-10:]]
-                    avg_vib = sum(recent_vib) / len(recent_vib)
-                    # Could store this in a separate metric buffer
-                
-                if len(turbine.rotor_speed_rpm) > 5:
-                    recent_rpm = [v for _, v in list(turbine.rotor_speed_rpm)[-5:]]
-                    avg_rpm = sum(recent_rpm) / len(recent_rpm)
-        except Exception as e:
-            print(f"Error in rolling metrics: {e}")
-        time.sleep(10)
-
-
-def compute_aggregates():
-    """Every 1min: compute aggregates + health score"""
-    while True:
-        try:
-            now = datetime.now(timezone.utc)
-            cutoff_1min = now - timedelta(minutes=1)
-            
-            for turbine in turbines.values():
-                # Compute 1-min aggregates
-                agg = {}
-                if turbine.power_kw:
-                    recent_power = [(ts, v) for ts, v in turbine.power_kw if ts >= cutoff_1min]
-                    if recent_power:
-                        values = [v for _, v in recent_power]
-                        agg["power_kw"] = {
-                            "min": min(values),
-                            "max": max(values),
-                            "avg": sum(values) / len(values)
-                        }
-                
-                if turbine.vibration_rms_mm_s:
-                    recent_vib = [(ts, v) for ts, v in turbine.vibration_rms_mm_s if ts >= cutoff_1min]
-                    if recent_vib:
-                        values = [v for _, v in recent_vib]
-                        agg["vibration_rms_mm_s"] = {
-                            "min": min(values),
-                            "max": max(values),
-                            "avg": sum(values) / len(values)
-                        }
-                
-                if agg:
-                    turbine.aggregates_1min.append((now, agg))
-                
-                # Compute health score (simplified)
-                health_factors = []
-                if turbine.limits and turbine.limits.vibration_rms_mm_s:
-                    if turbine.vibration_rms_mm_s:
-                        latest_vib = turbine.vibration_rms_mm_s[-1][1]
-                        warn = turbine.limits.vibration_rms_mm_s.get("warn", 0)
-                        if latest_vib < warn:
-                            health_factors.append(1.0)
-                        elif latest_vib < turbine.limits.vibration_rms_mm_s.get("alarm", warn * 1.5):
-                            health_factors.append(0.7)
-                        else:
-                            health_factors.append(0.3)
-                
-                if health_factors:
-                    turbine.health_score = sum(health_factors) / len(health_factors) * 100
-                else:
-                    turbine.health_score = 100.0
-                
-                # Update status based on health
-                if turbine.health_score >= 90:
-                    turbine.status = "online"
-                elif turbine.health_score >= 70:
-                    turbine.status = "warning"
-                else:
-                    turbine.status = "critical"
-                
-                # Broadcast aggregate update
-                socketio.emit("message", {
-                    "type": "agg",
-                    "turbine_id": turbine.turbine_id,
-                    "ts": now.isoformat().replace("+00:00", "Z"),
-                    "aggregates": agg,
-                    "health_score": turbine.health_score
-                })
-        except Exception as e:
-            print(f"Error in aggregates: {e}")
-        time.sleep(60)
-
-
-def compute_risk_scores():
-    """Every 5min: compute risk scores"""
-    while True:
-        try:
-            for turbine in turbines.values():
-                # Simplified risk calculation based on vibration and temperatures
-                risks = {}
-                
-                # Gearbox risk
-                if turbine.vibration_rms_mm_s and turbine.limits and turbine.limits.vibration_rms_mm_s:
-                    latest_vib = turbine.vibration_rms_mm_s[-1][1]
-                    warn = turbine.limits.vibration_rms_mm_s.get("warn", 7)
-                    alarm = turbine.limits.vibration_rms_mm_s.get("alarm", 10)
-                    if latest_vib >= alarm:
-                        risks["gearbox"] = 90.0
-                    elif latest_vib >= warn:
-                        risks["gearbox"] = 50.0 + (latest_vib - warn) / (alarm - warn) * 40
-                    else:
-                        risks["gearbox"] = (latest_vib / warn) * 50
-                else:
-                    risks["gearbox"] = 0.0
-                
-                # Generator risk
-                if turbine.generator_winding_temp_c and turbine.limits and turbine.limits.generator_winding_temp_c:
-                    latest_temp = turbine.generator_winding_temp_c[-1][1]
-                    warn = turbine.limits.generator_winding_temp_c.get("warn", 95)
-                    alarm = turbine.limits.generator_winding_temp_c.get("alarm", 110)
-                    if latest_temp >= alarm:
-                        risks["generator"] = 90.0
-                    elif latest_temp >= warn:
-                        risks["generator"] = 50.0 + (latest_temp - warn) / (alarm - warn) * 40
-                    else:
-                        risks["generator"] = (latest_temp / warn) * 50
-                else:
-                    risks["generator"] = 0.0
-                
-                # Simple risk for other components
-                risks["blades"] = risks.get("gearbox", 0) * 0.7
-                risks["bearings"] = risks.get("gearbox", 0) * 0.9
-                risks["power_panel"] = 0.0  # Simple for now
-                
-                turbine.component_risks = risks
-                
-                # Update RUL based on risks (simplified)
-                for component in risks:
-                    if component in turbine.rul:
-                        risk = risks[component]
-                        # Decrease RUL faster with higher risk
-                        turbine.rul[component]["value"] = max(0, turbine.rul[component]["value"] - (risk / 100) * 0.083)  # ~5min
-                        turbine.rul[component]["confidence"] = max(0.5, 1.0 - (risk / 100) * 0.3)
-        except Exception as e:
-            print(f"Error in risk scores: {e}")
-        time.sleep(300)  # 5 minutes
-
-
-def refresh_forecasts():
-    """Every 15min: refresh short-term forecast; Every 6h: long-term"""
-    short_term_counter = 0
-    while True:
-        try:
-            now = datetime.now(timezone.utc)
-            short_term_counter += 1
-            
-            # Short-term forecast (15min)
-            # Simplified: based on recent wind speed trends
-            for turbine in turbines.values():
-                if turbine.wind_speed_ms and len(turbine.wind_speed_ms) > 10:
-                    recent_wind = [v for _, v in list(turbine.wind_speed_ms)[-10:]]
-                    avg_wind = sum(recent_wind) / len(recent_wind)
-                    # Simple forecast: assume wind continues at recent average
-                    forecast_power = min(turbine.capacity_kw or 2000, avg_wind ** 3 * 0.1) if turbine.capacity_kw else avg_wind ** 3 * 0.1
-                    
-                    socketio.emit("message", {
-                        "type": "forecast",
-                        "turbine_id": turbine.turbine_id,
-                        "ts": now.isoformat().replace("+00:00", "Z"),
-                        "forecast_type": "short_term",
-                        "predicted_power_kw": forecast_power
-                    })
-            
-            # Long-term forecast (every 6h = 24 * 15min intervals)
-            if short_term_counter >= 24:
-                short_term_counter = 0
-                # Long-term forecast logic here
-                for turbine in turbines.values():
-                    socketio.emit("message", {
-                        "type": "forecast",
-                        "turbine_id": turbine.turbine_id,
-                        "ts": now.isoformat().replace("+00:00", "Z"),
-                        "forecast_type": "long_term",
-                        "predicted_power_kw": turbine.capacity_kw * 0.7 if turbine.capacity_kw else 1400
-                    })
-        except Exception as e:
-            print(f"Error in forecasts: {e}")
-        time.sleep(900)  # 15 minutes
-
-
-ENABLE_SIMULATOR = os.getenv("ENABLE_SIMULATOR", "false").lower() in ("true", "1", "yes")
-
-
-def run_internal_simulator():
-    try:
-        import sys
-        # Ensure the simulator targets the correct port assigned by the environment (e.g. Railway)
-        if "--url" not in sys.argv:
-            sys.argv.extend(["--url", f"http://127.0.0.1:{PORT}"])
-            
-        from simulate import main as run_simulator
-        print("Starting internal turbine simulator thread...")
-        run_simulator()
-    except Exception as e:
-        print(f"Error starting internal simulator: {e}")
-
-
-def start_background_tasks():
-    """Start all background task threads"""
-    threading.Thread(target=compute_rolling_metrics, daemon=True).start()
-    threading.Thread(target=compute_aggregates, daemon=True).start()
-    threading.Thread(target=compute_risk_scores, daemon=True).start()
-    threading.Thread(target=refresh_forecasts, daemon=True).start()
-    if ENABLE_SIMULATOR:
-        threading.Thread(target=run_internal_simulator, daemon=True).start()
+# Wrap FastAPI application with python-socketio ASGIApp
+socket_app = socketio.ASGIApp(
+    sio,
+    other_asgi_app=app,
+    socketio_path="socket.io"
+)
 
 
 if __name__ == "__main__":
-    print(f"Starting server on port {PORT}")
-    start_background_tasks()
-    socketio.run(app, host="0.0.0.0", port=PORT, debug=True)
-
+    import uvicorn
+    server_port = int(os.getenv("PORT", "8000"))
+    print(f"Starting server on port {server_port}")
+    uvicorn.run("main:socket_app", host="0.0.0.0", port=server_port, reload=False)

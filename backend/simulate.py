@@ -9,7 +9,7 @@ import time
 import random
 import json
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 import signal
 import sys
@@ -173,7 +173,7 @@ class TurbineSimulator:
     def create_payload(self, signals: Dict) -> Dict:
         """Create ingest payload"""
         self.seq += 1
-        ts = datetime.utcnow().isoformat() + "Z"
+        ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         
         payload = {
             "turbine_id": self.turbine_id,

@@ -27,12 +27,12 @@ python main.py
 ```
 Or directly with Uvicorn:
 ```bash
-uvicorn main:socket_app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:socket_app --host 0.0.0.0 --port 8080 --reload
 ```
 
 Interactive API documentation is available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- Swagger UI: `http://localhost:8080/docs`
+- ReDoc: `http://localhost:8080/redoc`
 
 ## API Endpoints
 
@@ -60,7 +60,7 @@ Live updates channel. Connect and subscribe to receive:
 
 - `INGEST_TOKEN`: Bearer token for the ingest endpoint (default: `dev-token-change-in-production`)
 - `ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins (e.g., `http://localhost:3000,https://myfrontend.up.railway.app`)
-- `PORT`: Server port (default: 8000)
+- `PORT`: Server port (default: 8080)
 - `ENABLE_SIMULATOR`: Set to `true` to run the turbine simulator internally inside the backend process.
 - `OPENAI_KEY`: (Optional) OpenAI API key for AI-driven root cause and maintenance analysis.
 
@@ -68,6 +68,6 @@ Live updates channel. Connect and subscribe to receive:
 
 1. **Root Directory**: `backend`
 2. **Build Command**: `pip install -r requirements.txt`
-3. **Start Command**: `uvicorn main:socket_app --host 0.0.0.0 --port ${PORT:-8000}` (or `python main.py`)
+3. **Start Command**: `uvicorn main:socket_app --host 0.0.0.0 --port ${PORT:-8080}` (or `python main.py`)
 4. **Healthcheck Path**: `/health`
 5. **Variables**: Configure `INGEST_TOKEN`, `ALLOWED_ORIGINS`, `ENABLE_SIMULATOR` (if desired), and `OPENAI_KEY` (optional).

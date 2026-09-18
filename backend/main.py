@@ -28,7 +28,7 @@ except ImportError:
 load_dotenv()
 
 INGEST_TOKEN = os.getenv("INGEST_TOKEN", "dev-token-change-in-production")
-PORT = int(os.getenv("PORT", "8000"))
+PORT = int(os.getenv("PORT", "8080"))
 OPENAI_KEY = os.getenv("OPENAI_KEY", "")
 raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
 allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
@@ -905,6 +905,6 @@ socket_app = socketio.ASGIApp(
 
 if __name__ == "__main__":
     import uvicorn
-    server_port = int(os.getenv("PORT", "8000"))
+    server_port = int(os.getenv("PORT", "8080"))
     print(f"Starting server on port {server_port}")
     uvicorn.run("main:socket_app", host="0.0.0.0", port=server_port, reload=False)

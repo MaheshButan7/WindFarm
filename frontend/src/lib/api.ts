@@ -3,7 +3,7 @@
  */
 import type { SnapshotResponse, Alert, AlertStats, AlertTimelineEvent, AlertAffectedParameter, AlertDiagnostics } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export async function fetchSnapshot(
   window: string = "30m"

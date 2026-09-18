@@ -580,27 +580,35 @@ async def refresh_forecasts_task():
 
 
 ENABLE_SIMULATOR = os.getenv("ENABLE_SIMULATOR", "false").lower() in ("true", "1", "yes")
+simulator_stop_event = threading.Event()
 
 
 def run_internal_simulator():
     """Run the simulator in a background thread if enabled"""
     try:
-        if "--url" not in sys.argv:
-            sys.argv.extend(["--url", f"http://127.0.0.1:{PORT}"])
-        if "--token" not in sys.argv:
-            sys.argv.extend(["--token", INGEST_TOKEN])
-
-        from simulate import main as run_simulator
-        print("Starting internal turbine simulator thread...")
-        run_simulator()
+        import time
+        import traceback
+        # Allow uvicorn time to bind to the port and accept connections
+        time.sleep(2)
+        import simulate
+        target_url = f"http://127.0.0.1:{PORT}"
+        print(f"🚀 Internal turbine simulator active! Target URL: {target_url}")
+        simulate.run_simulation(
+            url=target_url,
+            token=INGEST_TOKEN,
+            turbines=10,
+            stop_event=simulator_stop_event
+        )
     except Exception as e:
-        print(f"Error starting internal simulator: {e}")
+        print(f"Error in internal simulator thread: {e}")
+        traceback.print_exc()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI Lifespan for managing background tasks and resources"""
     print(f"Wind Turbine Backend starting on port {PORT}...")
+    print(f"Internal simulator setting: ENABLE_SIMULATOR={ENABLE_SIMULATOR}")
     tasks = [
         asyncio.create_task(compute_rolling_metrics_task()),
         asyncio.create_task(compute_aggregates_task()),
@@ -614,6 +622,7 @@ async def lifespan(app: FastAPI):
     yield
 
     print("Shutting down background tasks...")
+    simulator_stop_event.set()
     for t in tasks:
         t.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)

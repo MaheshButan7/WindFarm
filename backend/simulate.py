@@ -10,7 +10,7 @@ import random
 import json
 import requests
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 import signal
 import sys
 from dotenv import load_dotenv
@@ -284,23 +284,23 @@ class TurbineSimulator:
                     print(f"[{self.turbine_id}] Failed to send after {max_retries} attempts: {e}")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Wind Turbine Simulator")
-    parser.add_argument("--url", default=os.getenv("URL", "http://localhost:8080"), help="Main server URL")
-    parser.add_argument("--token", default=os.getenv("INGEST_TOKEN", "dev-token-change-in-production"), help="Ingest token")
-    parser.add_argument("--turbines", type=int, default=10, help="Number of turbines")
-    args = parser.parse_args()
-    
+def run_simulation(url: Optional[str] = None, token: Optional[str] = None, turbines: int = 10, stop_event = None):
+    """Run simulation loop targeting specified url and token"""
+    if not url:
+        url = os.getenv("URL", "http://localhost:8080")
+    if not token:
+        token = os.getenv("INGEST_TOKEN", "dev-token-change-in-production")
+
     # Create simulators
     simulators = []
-    for i in range(args.turbines):
+    for i in range(turbines):
         turbine_id = f"TURB-{i+1:03d}"
         base_wind = random.uniform(6.0, 10.0)
         simulators.append(TurbineSimulator(turbine_id, base_wind))
-    
+
     print(f"Starting {len(simulators)} turbine simulators...")
-    print(f"Target URL: {args.url}")
-    
+    print(f"Target URL: {url}")
+
     # Timing counters
     counter_1s = 0
     counter_2s = 0
@@ -308,15 +308,15 @@ def main():
     counter_15s = 0
     counter_60s = 0
     counter_grid = 0
-    
+
     # Event tracking
     for sim in simulators:
         sim.event_counter = 0
-    
+
     try:
-        while True:
+        while stop_event is None or not stop_event.is_set():
             start_time = time.time()
-            
+
             # Update states
             for sim in simulators:
                 sim.update_vibration()
@@ -326,49 +326,49 @@ def main():
                 sim.update_yaw()
                 sim.update_temperatures()
                 sim.update_ambient()
-                
+
                 # Reset event flag
                 if sim.event_counter > 0:
                     sim.event_counter -= 1
                     if sim.event_counter == 0:
                         sim.in_event = False
-            
+
             # Send signals based on cadence
             # 1s: vibration
             if counter_1s % 1 == 0:
                 for sim in simulators:
-                    sim.send_1s(args.url, args.token)
-            
+                    sim.send_1s(url, token)
+
             # 2s: rotor speed, power, pitch
             if counter_2s % 2 == 0:
                 for sim in simulators:
-                    sim.send_2s(args.url, args.token)
-            
+                    sim.send_2s(url, token)
+
             # 5s: yaw, wind
             if counter_5s % 5 == 0:
                 for sim in simulators:
-                    sim.send_5s(args.url, args.token)
-            
+                    sim.send_5s(url, token)
+
             # 15s: temperatures
             if counter_15s % 15 == 0:
                 for sim in simulators:
-                    sim.send_15s(args.url, args.token)
-            
+                    sim.send_15s(url, token)
+
             # 60s: ambient
             if counter_60s % 60 == 0:
                 for sim in simulators:
-                    sim.send_60s(args.url, args.token)
-            
+                    sim.send_60s(url, token)
+
             # Grid status: check for changes and heartbeat
             grid_changed = False
             for sim in simulators:
                 if sim.update_grid_status():
                     grid_changed = True
-            
+
             if grid_changed or counter_grid % 5 == 0:
                 for sim in simulators:
-                    sim.send_grid_status(args.url, args.token)
-            
+                    sim.send_grid_status(url, token)
+
             # Increment counters
             counter_1s += 1
             counter_2s += 1
@@ -376,17 +376,29 @@ def main():
             counter_15s += 1
             counter_60s += 1
             counter_grid += 1
-            
+
             # Sleep to maintain 1s base cadence
             elapsed = time.time() - start_time
             sleep_time = max(0, 1.0 - elapsed)
             time.sleep(sleep_time)
-            
+
     except KeyboardInterrupt:
         print("\nShutting down simulators...")
-        sys.exit(0)
+    except Exception as e:
+        print(f"Simulator error: {e}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Wind Turbine Simulator")
+    parser.add_argument("--url", default=os.getenv("URL", "http://localhost:8080"), help="Main server URL")
+    parser.add_argument("--token", default=os.getenv("INGEST_TOKEN", "dev-token-change-in-production"), help="Ingest token")
+    parser.add_argument("--turbines", type=int, default=10, help="Number of turbines")
+    args, _ = parser.parse_known_args()
+
+    run_simulation(url=args.url, token=args.token, turbines=args.turbines)
 
 
 if __name__ == "__main__":
     main()
+
 

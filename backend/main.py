@@ -823,15 +823,30 @@ def refresh_forecasts():
         time.sleep(900)  # 15 minutes
 
 
+ENABLE_SIMULATOR = os.getenv("ENABLE_SIMULATOR", "false").lower() in ("true", "1", "yes")
+
+
+def run_internal_simulator():
+    try:
+        from simulate import main as run_simulator
+        print("Starting internal turbine simulator thread...")
+        run_simulator()
+    except Exception as e:
+        print(f"Error starting internal simulator: {e}")
+
+
 def start_background_tasks():
     """Start all background task threads"""
     threading.Thread(target=compute_rolling_metrics, daemon=True).start()
     threading.Thread(target=compute_aggregates, daemon=True).start()
     threading.Thread(target=compute_risk_scores, daemon=True).start()
     threading.Thread(target=refresh_forecasts, daemon=True).start()
+    if ENABLE_SIMULATOR:
+        threading.Thread(target=run_internal_simulator, daemon=True).start()
 
 
 if __name__ == "__main__":
     print(f"Starting server on port {PORT}")
     start_background_tasks()
     socketio.run(app, host="0.0.0.0", port=PORT, debug=True)
+

@@ -286,7 +286,7 @@ class TurbineSimulator:
 
 def main():
     parser = argparse.ArgumentParser(description="Wind Turbine Simulator")
-    parser.add_argument("--url", default="http://localhost:8000", help="Main server URL")
+    parser.add_argument("--url", default=os.getenv("URL", "http://localhost:8000"), help="Main server URL")
     parser.add_argument("--token", default=os.getenv("INGEST_TOKEN", "dev-token-change-in-production"), help="Ingest token")
     parser.add_argument("--turbines", type=int, default=10, help="Number of turbines")
     args = parser.parse_args()

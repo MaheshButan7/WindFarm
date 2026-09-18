@@ -828,6 +828,11 @@ ENABLE_SIMULATOR = os.getenv("ENABLE_SIMULATOR", "false").lower() in ("true", "1
 
 def run_internal_simulator():
     try:
+        import sys
+        # Ensure the simulator targets the correct port assigned by the environment (e.g. Railway)
+        if "--url" not in sys.argv:
+            sys.argv.extend(["--url", f"http://127.0.0.1:{PORT}"])
+            
         from simulate import main as run_simulator
         print("Starting internal turbine simulator thread...")
         run_simulator()

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wind Asset Intelligence — POC</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:#f7f8fa;color:#1f2937}
+  button,input,select{font:inherit}
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+  aside{background:#ffffff;color:#6b7280;padding:18px 14px;border-right:1px solid #e5e7eb}
+  .brand{font-size:18px;font-weight:700;padding:8px 10px 24px;color:#1f2937}
+  .brand span{display:block;font-size:11px;font-weight:400;color:#9ca3af;margin-top:4px}
+  nav button{display:block;width:100%;text-align:left;background:none;border:0;color:#6b7280;padding:11px 12px;border-radius:6px;margin:3px 0;cursor:pointer;font-weight:500}
+  nav button.active,nav button:hover{background:#f0fdf4;color:#15803d}
+  main{min-width:0}
+  header{height:64px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+  header h1{font-size:18px;margin:0}
+  .header-right{display:flex;align-items:center;gap:10px;font-size:12px;color:#667085}
+  .status-dot{width:8px;height:8px;background:#16a34a;border-radius:50%;display:inline-block}
+  .content{padding:22px 24px}
+  .page{display:none}
+  .page.active{display:block}
+  .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .toolbar-left,.toolbar-right{display:flex;gap:8px;align-items:center}
+  select,.input{background:#fff;border:1px solid #d8dee8;border-radius:6px;padding:8px 10px;color:#273449}
+  .btn{border:1px solid #cfd6e2;background:#fff;border-radius:6px;padding:8px 12px;cursor:pointer}
+  .btn.primary{background:#10b981;color:#fff;border-color:#10b981}
+  .btn:hover{filter:brightness(.97)}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:15px;box-shadow:0 1px 2px rgba(0,0,0,.02)}
+  .kpi-label{font-size:12px;color:#667085;margin-bottom:8px}
+  .kpi-value{font-size:24px;font-weight:700;color:#1f2937}
+  .kpi-sub{font-size:11px;color:#7b8798;margin-top:5px}
+  .grid-2{display:grid;grid-template-columns:1.35fr 1fr;gap:14px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .card-title{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;margin-bottom:14px}
+  .muted{font-size:12px;color:#7a8494}
+  .farm-map{height:300px;background:#f8fafc;border:1px dashed #cfd7e4;border-radius:6px;position:relative;overflow:hidden}
+  .map-grid{position:absolute;inset:0;background-image:linear-gradient(#e9edf3 1px,transparent 1px),linear-gradient(90deg,#e9edf3 1px,transparent 1px);background-size:42px 42px}
+  .turbine{position:absolute;width:76px;text-align:center;font-size:11px;cursor:pointer}
+  .turbine .tower{margin:auto;width:3px;height:32px;background:#68778d;position:relative}
+  .turbine .hub{width:9px;height:9px;background:#344054;border-radius:50%;margin:auto}
+  .turbine .blade{position:absolute;width:27px;height:2px;background:#68778d;top:4px;left:25px;transform-origin:left center}
+  .turbine.good .hub{background:#16a34a}.turbine.warn .hub{background:#f59e0b}.turbine.bad .hub{background:#dc2626}
+  .legend{display:flex;gap:15px;font-size:11px;color:#667085;margin-top:10px}.legend span{display:flex;gap:5px;align-items:center}.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .alert-list{display:flex;flex-direction:column;gap:9px}
+  .alert{border:1px solid #e1e6ed;border-left:4px solid #f59e0b;border-radius:5px;padding:10px 11px;background:#fff}
+  .alert.critical{border-left-color:#dc2626}.alert.info{border-left-color:#2563eb}
+  .alert strong{font-size:12px}.alert small{display:block;color:#7a8494;margin-top:4px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #edf0f4}
+  th{color:#667085;font-weight:600;background:#fafbfc}
+  tr.clickable{cursor:pointer} tr.clickable:hover{background:#f8fafc}
+  .pill{display:inline-block;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:700}
+  .pill.green{background:#e8f7ee;color:#16803c}.pill.yellow{background:#fff6db;color:#9a6700}.pill.red{background:#fdeaea;color:#b42318}.pill.blue{background:#eaf1ff;color:#175cd3}
+  .bar{height:7px;background:#edf0f4;border-radius:10px;overflow:hidden}.bar i{display:block;height:100%;background:#10b981}
+  .metric-row{display:grid;grid-template-columns:150px 1fr 50px;gap:10px;align-items:center;margin:10px 0;font-size:12px}
+  .detail-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+  .detail-name{font-size:20px;font-weight:700}
+  .detail-actions{display:flex;gap:7px}
+  .detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .metric{background:#fff;border:1px solid #e1e6ed;border-radius:7px;padding:12px}.metric .v{font-size:19px;font-weight:700}.metric .l{font-size:11px;color:#667085;margin-bottom:5px}
+  .chart{height:180px;position:relative;background:linear-gradient(to bottom,#fff,#fbfcfe);border:1px solid #edf0f4;border-radius:5px;overflow:hidden}
+  .chart svg{width:100%;height:100%}
+  .section-note{font-size:11px;color:#7a8494;margin-top:7px}
+  .ai-box{background:#f7f9fc;border:1px solid #dce3ed;border-radius:7px;padding:13px;font-size:12px;line-height:1.55}
+  .ai-box strong{font-size:13px}
+  .risk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .risk{border:1px solid #e1e6ed;border-radius:7px;padding:12px}.risk-name{font-size:11px;color:#667085}.risk-score{font-size:22px;font-weight:700;margin:4px 0}
+  .chat{display:flex;gap:8px;margin-top:12px}.chat input{flex:1;border:1px solid #d8dee8;border-radius:6px;padding:9px}.chat button{border:0;background:#10b981;color:#fff;border-radius:6px;padding:0 14px}
+  .response{margin-top:10px;padding:10px;background:#f7f9fc;border-radius:6px;font-size:12px;display:none}
+  @media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}.grid-2,.grid-3{grid-template-columns:1fr}.detail-grid,.risk-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:700px){.app{grid-template-columns:1fr}aside{display:none}.content{padding:14px}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <div class="brand">Wind Asset Intelligence<span>POC • AI decision layer</span></div>
+  <nav>
+    <button class="active" data-page="overview">Fleet Overview</button>
+    <button data-page="turbines">Turbines</button>
+    <button data-page="analytics">Performance Analytics</button>
+    <button data-page="alerts">Alerts & Events</button>
+    <button data-page="maintenance">Predictive Maintenance</button>
+    <button data-page="copilot">AI Operations Copilot</button>
+  </nav>
+</aside>
+
+<main>
+<header>
+  <h1 id="pageTitle">Fleet Overview</h1>
+  <div class="header-right"><span class="status-dot"></span> Data stream: simulated <span>•</span> Last update <span id="clock">--:--:--</span></div>
+</header>
+
+<div class="content">
+
+<section id="overview" class="page active">
+  <div class="card" style="margin-bottom:14px;padding:12px 15px">
+  <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-size:11px;color:#667085">
+    <b style="color:#374151">POC feature layer</b>
+    <span>SCADA Monitoring</span><span>Performance Analytics</span><span>ML Anomaly Detection</span><span>Predictive Risk</span><span>AI Copilot</span>
+  </div>
+</div>
+<div class="toolbar">
+    <div class="toolbar-left"><select id="farmFilter"><option>All Farms</option><option>Farm A</option><option>Farm B</option></select><select><option>Last 24 hours</option><option>Last 7 days</option><option>Last 30 days</option></select></div>
+    <div class="toolbar-right"><button class="btn" onclick="simulateEvent()">Simulate anomaly</button><button class="btn primary" onclick="showPage('copilot')">Ask AI</button></div>
+  </div>
+
+  <div class="kpis">
+    <div class="card"><div class="kpi-label">Turbines</div><div class="kpi-value">24</div><div class="kpi-sub">23 online • 1 degraded</div></div>
+    <div class="card"><div class="kpi-label">Current Power</div><div class="kpi-value">42.8 MW</div><div class="kpi-sub">−3.6% vs expected</div></div>
+    <div class="card"><div class="kpi-label">Availability</div><div class="kpi-value">96.4%</div><div class="kpi-sub">Target 97%</div></div>
+    <div class="card"><div class="kpi-label">Fleet Health</div><div class="kpi-value">91/100</div><div class="kpi-sub">2 turbines trending down</div></div>
+    <div class="card"><div class="kpi-label">Active Alerts</div><div class="kpi-value" id="alertCount">7</div><div class="kpi-sub">2 critical • 5 warning</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Wind Farm Status <span class="muted">Click a turbine</span></div>
+      <div class="farm-map"><div class="map-grid"></div>
+        <div class="turbine good" style="left:8%;top:20%" onclick="openTurbine('T01')"><div class="hub"></div><div class="blade"></div><div class="tower"></div>T01</div>
+        <div class="turbine good" style="left:25%;top:52%" onclick="openTurbine('T02')"><div class="hub"></div><div class="blade"></div><div class="tower"></div>T02</div>
+        <div class="turbine warn" style="left:43%;top:24%" onclick="openTurbine('T03')"><div class="hub"></div><div class="blade"></div><div class="tower"></div>T03</div>
+        <div class="turbine bad" style="left:60%;top:55%" onclick="openTurbine('T04')"><div class="hub"></div><div class="blade"></div><div class="tower"></div>T04</div>
+        <div class="turbine good" style="left:77%;top:22%" onclick="openTurbine('T05')"><div class="hub"></div><div class="blade"></div><div class="tower"></div>T05</div>
+        <div class="turbine good" style="left:87%;top:63%" onclick="openTurbine('T06')"><div class="hub"></div><div class="blade"></div><div class="tower"></div>T06</div>
+      </div>
+      <div class="legend"><span><i style="background:#16a34a"></i>Normal</span><span><i style="background:#f59e0b"></i>Warning</span><span><i style="background:#dc2626"></i>Critical</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">AI Insights <span class="pill blue">6 new</span></div>
+      <div class="alert-list">
+        <div class="alert critical"><strong>T04 — Gearbox degradation pattern</strong><small>Risk 82% • vibration +31% • temperature +12%</small></div>
+        <div class="alert"><strong>T03 — Yaw misalignment</strong><small>16° deviation • estimated power loss 4.7%</small></div>
+        <div class="alert"><strong>T17 — Performance deviation</strong><small>9.2% below expected power curve</small></div>
+        <div class="alert info"><strong>Fleet — Weather forecast updated</strong><small>Expected generation for next 24h: 1.04 GWh</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:14px">
+    <div class="card">
+      <div class="card-title">Fleet Power vs Expected</div>
+      <div class="chart">
+        <svg viewBox="0 0 700 180" preserveAspectRatio="none">
+          <polyline points="0,120 70,105 140,110 210,85 280,96 350,65 420,78 490,55 560,70 630,42 700,50" fill="none" stroke="#10b981" stroke-width="3"/>
+          <polyline points="0,112 70,98 140,96 210,76 280,78 350,55 420,60 490,43 560,48 630,32 700,35" fill="none" stroke="#9aa5b5" stroke-width="2" stroke-dasharray="6 5"/>
+        </svg>
+      </div>
+      <div class="section-note">Blue: actual • Dashed: expected</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Maintenance Priority</div>
+      <table><thead><tr><th>Turbine</th><th>Risk</th><th>Impact</th></tr></thead>
+      <tbody><tr><td><b>T04</b></td><td><span class="pill red">82%</span></td><td>High</td></tr><tr><td><b>T17</b></td><td><span class="pill yellow">67%</span></td><td>High</td></tr><tr><td><b>T03</b></td><td><span class="pill yellow">61%</span></td><td>Medium</td></tr></tbody></table>
+    </div>
+  </div>
+</section>
+
+<section id="turbines" class="page">
+  <div class="toolbar"><div class="toolbar-left"><input class="input" placeholder="Search turbine..." oninput="filterTable(this.value)"></div><div class="toolbar-right"><select><option>All status</option><option>Normal</option><option>Warning</option><option>Critical</option></select></div></div>
+  <div class="card"><div class="card-title">Turbine Fleet</div>
+  <table id="turbineTable"><thead><tr><th>Turbine</th><th>Status</th><th>Health</th><th>Power</th><th>Wind</th><th>Vibration</th><th>Gearbox Temp</th><th>Risk</th></tr></thead>
+  <tbody>
+    <tr class="clickable" onclick="openTurbine('T01')"><td><b>T01</b></td><td><span class="pill green">Normal</span></td><td>96</td><td>1.82 MW</td><td>8.8 m/s</td><td>3.8</td><td>61°C</td><td>8%</td></tr>
+    <tr class="clickable" onclick="openTurbine('T02')"><td><b>T02</b></td><td><span class="pill green">Normal</span></td><td>94</td><td>1.74 MW</td><td>8.5 m/s</td><td>4.0</td><td>63°C</td><td>11%</td></tr>
+    <tr class="clickable" onclick="openTurbine('T03')"><td><b>T03</b></td><td><span class="pill yellow">Warning</span></td><td>81</td><td>1.68 MW</td><td>8.7 m/s</td><td>4.8</td><td>66°C</td><td>61%</td></tr>
+    <tr class="clickable" onclick="openTurbine('T04')"><td><b>T04</b></td><td><span class="pill red">Critical</span></td><td>72</td><td>1.58 MW</td><td>8.7 m/s</td><td>5.8</td><td>71°C</td><td>82%</td></tr>
+    <tr class="clickable"><td><b>T05</b></td><td><span class="pill green">Normal</span></td><td>97</td><td>1.86 MW</td><td>9.0 m/s</td><td>3.5</td><td>60°C</td><td>6%</td></tr>
+    <tr class="clickable"><td><b>T06</b></td><td><span class="pill green">Normal</span></td><td>93</td><td>1.78 MW</td><td>8.9 m/s</td><td>4.1</td><td>64°C</td><td>13%</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="analytics" class="page">
+  <div class="toolbar"><div class="toolbar-left"><select><option>T04</option><option>T03</option><option>T17</option><option>Fleet Average</option></select><select><option>Last 24 hours</option><option>Last 7 days</option></select></div></div>
+  <div class="grid-3">
+    <div class="card"><div class="card-title">Power Curve</div><div class="chart"><svg viewBox="0 0 500 180" preserveAspectRatio="none"><polyline points="0,165 50,155 100,135 150,110 200,80 250,55 300,35 350,28 400,25 450,25 500,25" fill="none" stroke="#9aa5b5" stroke-width="2" stroke-dasharray="5 4"/><polyline points="0,165 50,157 100,140 150,118 200,91 250,67 300,49 350,45 400,52 450,62 500,70" fill="none" stroke="#10b981" stroke-width="3"/></svg></div><div class="section-note">Expected vs actual operating curve</div></div>
+    <div class="card"><div class="card-title">Yaw Alignment</div><div class="kpi-value">16°</div><div class="kpi-sub">Current yaw error</div><div class="metric-row"><span>Estimated loss</span><div class="bar"><i style="width:47%"></i></div><b>4.7%</b></div><div class="ai-box">Potential opportunity: improve nacelle alignment to recover production under current wind conditions.</div></div>
+    <div class="card"><div class="card-title">Energy Impact</div><div class="kpi-value">5.8 MWh</div><div class="kpi-sub">Estimated daily avoidable loss</div><div class="metric-row"><span>Gearbox</span><div class="bar"><i style="width:31%"></i></div><b>31%</b></div><div class="metric-row"><span>Yaw</span><div class="bar"><i style="width:24%"></i></div><b>24%</b></div><div class="metric-row"><span>Other</span><div class="bar"><i style="width:45%"></i></div><b>45%</b></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><div class="card-title">Operating Signals</div><div class="chart"><svg viewBox="0 0 1000 180" preserveAspectRatio="none"><polyline points="0,120 100,115 200,122 300,105 400,110 500,95 600,90 700,75 800,80 900,60 1000,55" fill="none" stroke="#10b981" stroke-width="3"/><polyline points="0,145 100,140 200,142 300,137 400,130 500,132 600,120 700,110 800,102 900,92 1000,84" fill="none" stroke="#f59e0b" stroke-width="2"/></svg></div><div class="section-note">Blue: power • Amber: gearbox temperature normalized</div></div>
+</section>
+
+<section id="alerts" class="page">
+  <div class="toolbar"><div class="toolbar-left"><select><option>All alerts</option><option>Critical</option><option>Warning</option><option>Predictive</option></select><select><option>Last 24 hours</option><option>Last 7 days</option></select></div><button class="btn" onclick="clearAlerts()">Acknowledge selected</button></div>
+  <div class="card"><div class="card-title">Alert & Event Center</div>
+    <table><thead><tr><th>Time</th><th>Turbine</th><th>Type</th><th>Event</th><th>Evidence</th><th>Priority</th></tr></thead>
+    <tbody id="alertRows">
+      <tr><td>13:17</td><td>T04</td><td>Predictive</td><td>Gearbox degradation pattern</td><td>Vibration +31%, temp +12%</td><td><span class="pill red">High</span></td></tr>
+      <tr><td>12:54</td><td>T03</td><td>Performance</td><td>Yaw misalignment</td><td>16° error, power loss 4.7%</td><td><span class="pill yellow">Medium</span></td></tr>
+      <tr><td>12:31</td><td>T17</td><td>Anomaly</td><td>Power curve deviation</td><td>−9.2% vs expected</td><td><span class="pill yellow">Medium</span></td></tr>
+      <tr><td>11:48</td><td>T08</td><td>Operational</td><td>Grid reconnection</td><td>45 sec interruption</td><td><span class="pill blue">Info</span></td></tr>
+    </tbody></table>
+  </div>
+</section>
+
+<section id="maintenance" class="page">
+  <div class="grid-2">
+    <div class="card"><div class="card-title">Predictive Maintenance Queue</div>
+      <table><thead><tr><th>Asset</th><th>Component</th><th>Risk</th><th>Priority</th></tr></thead>
+      <tbody><tr><td>T04</td><td>Gearbox</td><td>82%</td><td><span class="pill red">High</span></td></tr><tr><td>T17</td><td>Generator</td><td>67%</td><td><span class="pill red">High</span></td></tr><tr><td>T03</td><td>Yaw system</td><td>61%</td><td><span class="pill yellow">Medium</span></td></tr><tr><td>T22</td><td>Bearing</td><td>48%</td><td><span class="pill yellow">Medium</span></td></tr></tbody></table>
+    </div>
+    <div class="card"><div class="card-title">T04 — Recommended Action</div><div class="ai-box"><strong>Possible gearbox bearing degradation</strong><br><br>Evidence: persistent vibration increase, elevated gearbox temperature and 13.2% power deviation under comparable wind conditions.<br><br><b>Recommended:</b> inspect gearbox bearing and lubrication condition during the next maintenance window.</div><button class="btn primary" style="margin-top:12px" onclick="showPage('copilot')">Open Maintenance Copilot</button></div>
+  </div>
+  <div class="card" style="margin-top:14px"><div class="card-title">Risk Breakdown — T04</div><div class="risk-grid"><div class="risk"><div class="risk-name">Gearbox</div><div class="risk-score">82%</div><div class="bar"><i style="width:82%"></i></div></div><div class="risk"><div class="risk-name">Generator</div><div class="risk-score">14%</div><div class="bar"><i style="width:14%"></i></div></div><div class="risk"><div class="risk-name">Bearing</div><div class="risk-score">39%</div><div class="bar"><i style="width:39%"></i></div></div><div class="risk"><div class="risk-name">Yaw</div><div class="risk-score">61%</div><div class="bar"><i style="width:61%"></i></div></div></div></div>
+</section>
+
+<section id="copilot" class="page">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">AI Operations Copilot <span class="pill blue">POC</span></div>
+      <div class="muted">Ask questions about turbine performance, anomalies, risks and maintenance evidence.</div>
+      <div class="chat"><input id="question" placeholder="Why is T04 underperforming?"><button onclick="askAI()">Ask</button></div>
+      <div id="response" class="response"></div>
+      <div style="margin-top:16px"><div class="muted">Suggested questions</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px"><button class="btn" onclick="setQ('Why is T04 underperforming?')">Why is T04 underperforming?</button><button class="btn" onclick="setQ('Which turbine needs attention first?')">Which turbine needs attention first?</button><button class="btn" onclick="setQ('What evidence supports the gearbox risk?')">What evidence supports the gearbox risk?</button></div></div>
+    </div>
+    <div class="card"><div class="card-title">AI Response Evidence</div><div class="ai-box"><b>Current context</b><br><br>Asset: T04<br>Health: 72/100<br>Gearbox risk: 82%<br>Power deviation: −13.2%<br>Vibration trend: +31%<br>Gearbox temperature trend: +12%<br>Yaw error: 16°<br><br><b>Important:</b> The POC uses deterministic demo responses. Production AI should ground explanations in validated ML outputs, SCADA history, maintenance records and approved engineering documentation.</div></div>
+  </div>
+</section>
+
+<section id="turbineDetail" class="page">
+  <div class="detail-head"><div><div class="detail-name" id="detailName">T04</div><div class="muted">Turbine detail • live operating context</div></div><div class="detail-actions"><button class="btn" onclick="showPage('turbines')">Back</button><button class="btn primary" onclick="showPage('maintenance')">Maintenance</button></div></div>
+  <div class="detail-grid">
+    <div class="metric"><div class="l">Health</div><div class="v">72 / 100</div><span class="pill yellow">Degraded</span></div>
+    <div class="metric"><div class="l">Power</div><div class="v">1.58 MW</div><span class="muted">Expected 1.82 MW</span></div>
+    <div class="metric"><div class="l">Wind Speed</div><div class="v">8.7 m/s</div><span class="muted">Wind direction 214°</span></div>
+    <div class="metric"><div class="l">Failure Risk</div><div class="v">82%</div><span class="pill red">Gearbox</span></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-title">Live Trend</div><div class="chart"><svg viewBox="0 0 700 180" preserveAspectRatio="none"><polyline points="0,130 80,126 160,124 240,117 320,110 400,98 480,90 560,72 640,58 700,45" fill="none" stroke="#dc2626" stroke-width="3"/><polyline points="0,75 80,78 160,73 240,80 320,77 400,72 480,76 560,69 640,72 700,68" fill="none" stroke="#10b981" stroke-width="2"/></svg></div><div class="section-note">Red: vibration trend • Blue: power trend</div></div>
+    <div class="card"><div class="card-title">Why is T04 unhealthy?</div><div class="ai-box"><strong>Primary driver: gearbox behaviour</strong><br><br>Vibration has increased 31% against its baseline while gearbox temperature has increased 12%. At the same time, actual power is 13.2% below expected under comparable wind conditions.<br><br><b>Model confidence:</b> 87%</div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><div class="card-title">Live Parameters</div><div class="risk-grid"><div class="risk"><div class="risk-name">Rotor RPM</div><div class="risk-score">13.4</div><div class="muted">rpm</div></div><div class="risk"><div class="risk-name">Pitch A / B / C</div><div class="risk-score">4.2°</div><div class="muted">balanced</div></div><div class="risk"><div class="risk-name">Gearbox Temp</div><div class="risk-score">71°C</div><div class="muted">rising</div></div><div class="risk"><div class="risk-name">Vibration RMS</div><div class="risk-score">5.8</div><div class="muted">mm/s • high trend</div></div></div></div>
+</section>
+
+</div>
+</main>
+</div>
+
+<script>
+const titles={overview:'Fleet Overview',turbines:'Turbines',analytics:'Performance Analytics',alerts:'Alerts & Events',maintenance:'Predictive Maintenance',copilot:'AI Operations Copilot',turbineDetail:'Turbine Detail'};
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
+  document.getElementById('pageTitle').textContent=titles[id]||'Wind Asset Intelligence';
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
+function openTurbine(id){document.getElementById('detailName').textContent=id;showPage('turbineDetail')}
+function filterTable(v){document.querySelectorAll('#turbineTable tbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(v.toLowerCase())?'':'none')}
+function setQ(q){document.getElementById('question').value=q}
+function askAI(){
+  const q=document.getElementById('question').value.toLowerCase();
+  let r;
+  if(q.includes('underperform')) r='<b>T04 is underperforming by 13.2%.</b><br><br>Main evidence: 16° yaw error, vibration trend +31%, gearbox temperature trend +12%, and actual power of 1.58 MW versus 1.82 MW expected.<br><br><b>Likely subsystem:</b> gearbox/drivetrain. <b>Recommended:</b> inspect gearbox bearing and lubrication condition.';
+  else if(q.includes('first')||q.includes('attention')) r='<b>T04 should be investigated first in this demo.</b><br><br>Its gearbox risk is 82%, health is 72/100, and estimated production impact is high. The prioritization is based on risk, impact, urgency and model confidence.';
+  else if(q.includes('evidence')) r='<b>Evidence supporting T04 gearbox risk:</b><br><br>• Vibration +31% vs baseline<br>• Gearbox temperature +12%<br>• Power deviation −13.2%<br>• Persistent multivariate anomaly<br>• Similar operating-condition pattern';
+  else r='<b>Demo response:</b> I can analyze fleet health, turbine anomalies, performance deviations, risk evidence and maintenance recommendations. Try asking about T04.';
+  const el=document.getElementById('response');el.innerHTML=r;el.style.display='block';
+}
+function simulateEvent(){
+  document.getElementById('alertCount').textContent='8';
+  alert('Demo anomaly injected: T04 vibration trend increased. Open Alerts & Events or Turbine T04 to inspect the effect.');
+}
+function clearAlerts(){document.getElementById('alertCount').textContent='5';alert('Demo: selected alerts acknowledged.')}
+function tick(){document.getElementById('clock').textContent=new Date().toLocaleTimeString()}
+setInterval(tick,1000);tick();
+</script>
+</body>
+</html>

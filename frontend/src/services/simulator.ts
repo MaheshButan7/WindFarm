@@ -4,6 +4,12 @@ function noise(range: number) {
   return (Math.random() * 2 - 1) * range;
 }
 
+/**
+ * Core Synthetic Data Engine.
+ * Simulates a realistic operational state for a fleet of wind turbines, including
+ * telemetry noise, physical constraints, component degradation paths, and alert generation.
+ * This acts as a mock backend for the frontend-only demonstration.
+ */
 export class Simulator {
   private turbines: TurbineData[] = [];
   private alerts: Alert[] = [];
@@ -19,7 +25,7 @@ export class Simulator {
     this.injectScenario('T22', 'generator_overheating');
     this.injectScenario('T12', 'yaw_misalignment');
     
-    // Run simulation tick every second
+    // Run simulation tick every second to simulate 1Hz telemetry frequency
     setInterval(() => this.tick(), 1000);
   }
 
@@ -195,14 +201,23 @@ export class Simulator {
     });
   }
 
+  /**
+   * Retrieves the current realtime state of all turbines in the fleet.
+   */
   public getFleet(): TurbineData[] {
     return this.turbines;
   }
 
+  /**
+   * Retrieves a specific turbine by ID.
+   */
   public getTurbine(id: string): TurbineData | undefined {
     return this.turbines.find(t => t.id === id);
   }
 
+  /**
+   * Computes top-level KPIs for the entire farm (e.g., total power, fleet health).
+   */
   public getSummary(): FleetSummary {
     let online = 0;
     let critical = 0;
@@ -230,6 +245,9 @@ export class Simulator {
     };
   }
 
+  /**
+   * Manually forces a failure scenario onto a turbine to demonstrate the predictive AI features.
+   */
   public injectScenario(turbine_id: string, scenario: string) {
     const t = this.getTurbine(turbine_id);
     if (t) {
@@ -238,10 +256,16 @@ export class Simulator {
     }
   }
 
+  /**
+   * Returns the list of active and historical operational alerts.
+   */
   public getAlerts(): Alert[] {
     return this.alerts;
   }
 
+  /**
+   * Acknowledges an alert, changing its status and removing it from the active count.
+   */
   public acknowledgeAlert(id: string) {
     const a = this.alerts.find(x => x.id === id);
     if (a) {

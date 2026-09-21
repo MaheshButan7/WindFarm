@@ -1,0 +1,33 @@
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-subtle);
+  overflow: hidden;
+}
+
+.elevated {
+  background-color: var(--surface-elevated);
+  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.08);
+}
+
+[data-theme='dark'] .elevated {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Padding variants */
+.padding-none {
+  padding: 0;
+}
+
+.padding-compact {
+  padding: 12px 16px;
+}
+
+.padding-standard {
+  padding: 16px;
+}
+
+.padding-large {
+  padding: 24px;
+}

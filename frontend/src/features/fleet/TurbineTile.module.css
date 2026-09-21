@@ -1,0 +1,119 @@
+.tile {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 3px solid transparent;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.1);
+}
+
+[data-theme='dark'] .tile:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Status variants for top border */
+.healthy { border-top-color: var(--status-healthy); }
+.warning { border-top-color: var(--status-warning); }
+.degraded { border-top-color: var(--status-degraded); }
+.critical { border-top-color: var(--status-critical); }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.titleGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusRing {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.bg-healthy { background-color: var(--status-healthy); }
+.bg-warning { background-color: var(--status-warning); }
+.bg-degraded { background-color: var(--status-degraded); }
+.bg-critical { background-color: var(--status-critical); }
+
+.healthRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 4px;
+}
+
+.healthLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.healthValue {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.healthBar {
+  height: 4px;
+  background-color: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.healthFill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.metricRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.metricLabel {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.metricValue {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.footer {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.riskRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.riskValue {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.highRisk {
+  color: var(--status-critical);
+}

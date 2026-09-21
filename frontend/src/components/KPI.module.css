@@ -1,0 +1,57 @@
+.kpiCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.accent.healthy { background-color: var(--status-healthy); }
+.accent.warning { background-color: var(--status-warning); }
+.accent.degraded { background-color: var(--status-degraded); }
+.accent.critical { background-color: var(--status-critical); }
+.accent.info { background-color: var(--status-info); }
+.accent.neutral { background-color: var(--status-neutral); }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-transform: uppercase;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.trendUp, .textUp { color: var(--status-degraded); } /* usually orange for higher values, unless it's good. In industrial, higher risk/vib is bad. For power, higher is good. I will use standard colors for trends here, maybe generic */
+.trendDown, .textDown { color: var(--status-info); }
+.trendFlat { color: var(--text-muted); }
+
+/* Let's make trend colors agnostic or use standard text colors for the generic trend, since context matters (power up = good, vibration up = bad) */
+.trendUp { color: var(--text-secondary); }
+.trendDown { color: var(--text-secondary); }
+.textUp { color: var(--text-secondary); font-weight: 500; }
+.textDown { color: var(--text-secondary); font-weight: 500; }

@@ -1,0 +1,32 @@
+.layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.container {
+  width: 100%;
+  padding: 24px;
+}
+
+/* Desktop primary, adapt padding on large screens */
+@media (min-width: 1440px) {
+  .container {
+    padding: 32px;
+  }
+}

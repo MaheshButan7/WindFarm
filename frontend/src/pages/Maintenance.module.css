@@ -1,0 +1,73 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.priorityGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.priorityCard {
+  display: flex;
+  flex-direction: column;
+  border-top: 3px solid var(--status-warning);
+}
+
+.priorityCard:nth-child(1), .priorityCard:nth-child(2) {
+  border-top-color: var(--status-critical);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rank {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.turbineId {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.riskScore {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.riskScore strong {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.details {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.componentName {
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--text-primary);
+}
+
+.action {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}

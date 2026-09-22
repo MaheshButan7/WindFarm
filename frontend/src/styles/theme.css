@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 :root {
   /* Brand Accents */
   --brand-primary: #EAB308;
@@ -18,6 +16,7 @@
   --bg-primary: #F8FAFC;
   --bg-secondary: #F1F5F9;
   --surface: #FFFFFF;
+  --surface-transparent: rgba(255, 255, 255, 0.85);
   --surface-elevated: #FFFFFF;
   --border: #E2E8F0;
   --text-primary: #0F172A;
@@ -27,7 +26,8 @@
 
   /* Focus & Utility */
   --focus-ring: rgba(234, 179, 8, 0.5);
-  --shadow-subtle: 0 4px 12px rgba(15, 23, 42, 0.05);
+  --shadow-subtle: 0 2px 8px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.04);
+  --shadow-hover: 0 12px 32px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
   
   /* Font Families */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -38,6 +38,7 @@
   --bg-primary: #080C11;
   --bg-secondary: #0E141D;
   --surface: #131B26;
+  --surface-transparent: rgba(19, 27, 38, 0.85);
   --surface-elevated: #1A2535;
   --border: #212D3F;
   --text-primary: #F8FAFC;
@@ -45,7 +46,8 @@
   --text-muted: #64748B;
   --sidebar-bg: #0B1017;
   
-  --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-subtle: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255,255,255,0.05);
+  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255,255,255,0.1);
 }
 
 /* Global Reset & Base */

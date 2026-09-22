@@ -5,12 +5,58 @@ import { globalSimulator } from '../services/simulator';
 import { TurbineData } from '../services/types';
 import styles from './Analytics.module.css';
 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  RadialLinearScale,
+  Filler,
+  ScatterController
+} from 'chart.js';
+import { Line, Doughnut, Radar, Scatter } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  RadialLinearScale,
+  ScatterController,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
+
+// Helper to get CSS variable value for charts
+const getComputedVar = (varName: string) => {
+  if (typeof window === 'undefined') return '#000';
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+};
+
 export function Analytics() {
   const [view, setView] = useState<'FLEET' | 'INDIVIDUAL'>('FLEET');
   const [selectedId, setSelectedId] = useState('T04');
   const [turbine, setTurbine] = useState<TurbineData | undefined>(undefined);
   const [fleet, setFleet] = useState<TurbineData[]>(globalSimulator.getFleet());
   const [summary, setSummary] = useState(globalSimulator.getSummary());
+  const [themeTick, setThemeTick] = useState(0);
+
+  // Re-render charts when dark mode changes
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setThemeTick(t => t + 1);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const update = () => {
@@ -23,6 +69,42 @@ export function Analytics() {
     return () => { unsubscribe(); };
   }, [selectedId]);
 
+  // Chart Theme Options
+  const chartOptions = useMemo(() => {
+    const textColor = getComputedVar('--text-primary') || '#0F172A';
+    const gridColor = getComputedVar('--border') || '#E2E8F0';
+    const tooltipBg = getComputedVar('--surface-elevated') || '#FFFFFF';
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      color: textColor,
+      animation: { duration: 0 }, // Disable animation for real-time updates
+      plugins: {
+        legend: {
+          labels: { color: textColor }
+        },
+        tooltip: {
+          backgroundColor: tooltipBg,
+          titleColor: textColor,
+          bodyColor: textColor,
+          borderColor: gridColor,
+          borderWidth: 1,
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: gridColor },
+          ticks: { color: textColor }
+        },
+        y: {
+          grid: { color: gridColor },
+          ticks: { color: textColor }
+        }
+      }
+    };
+  }, [themeTick]);
+
   // Fleet distribution metrics
   const healthDist = useMemo(() => {
     const counts = { healthy: 0, warning: 0, degraded: 0, critical: 0 };
@@ -32,16 +114,7 @@ export function Analytics() {
       else if (t.status === 'DEGRADED') counts.degraded++;
       else if (t.status === 'CRITICAL') counts.critical++;
     });
-    const total = fleet.length || 1;
-    return {
-      counts,
-      pcts: {
-        healthy: (counts.healthy / total) * 100,
-        warning: (counts.warning / total) * 100,
-        degraded: (counts.degraded / total) * 100,
-        critical: (counts.critical / total) * 100,
-      }
-    };
+    return counts;
   }, [fleet]);
 
   const componentRisks = useMemo(() => {
@@ -53,187 +126,339 @@ export function Analytics() {
     return globalSimulator.getHistory(selectedId, 24);
   }, [selectedId, turbine]);
 
-  const renderFleetView = () => (
-    <>
-      <div className={styles.kpiStrip}>
-        <KPI label="FLEET POWER" value={(summary.current_power_kw / 1000).toFixed(2)} unit="MW" secondary="Total active power" />
-        <KPI label="FLEET EXPECTED" value={(summary.expected_power_kw / 1000).toFixed(2)} unit="MW" secondary="Based on conditions" />
-        <KPI label="AVAILABILITY" value={summary.availability_pct.toFixed(1)} unit="%" secondary="Fleet wide" accent={summary.availability_pct > 95 ? 'healthy' : 'warning'} />
-        <KPI label="LOSS ESTIMATE" value={((summary.expected_power_kw - summary.current_power_kw) * 24 / 1000).toFixed(2)} unit="MWh" secondary="24h projection" accent="degraded" />
-      </div>
+  const fleetHistory24h = useMemo(() => {
+    return globalSimulator.getFleetHistory(24);
+  }, [fleet]);
 
-      <div className={styles.grid}>
-        <Card className={styles.chartPlaceholder}>
-          <h3 className="text-section-heading">Fleet Health Distribution</h3>
-          <p className="text-muted text-tiny mt-1 mb-4">Breakdown of operational health status across {fleet.length} assets</p>
-          <div className={styles.barChart}>
-            <div className={styles.barGroup}>
-              <div className={styles.barLabel}>Healthy ({healthDist.counts.healthy})</div>
-              <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${healthDist.pcts.healthy}%`, background: 'var(--status-healthy)' }}/></div>
-              <div className={styles.barValue}>{Math.round(healthDist.pcts.healthy)}%</div>
-            </div>
-            <div className={styles.barGroup}>
-              <div className={styles.barLabel}>Warning ({healthDist.counts.warning})</div>
-              <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${healthDist.pcts.warning}%`, background: 'var(--status-warning)' }}/></div>
-              <div className={styles.barValue}>{Math.round(healthDist.pcts.warning)}%</div>
-            </div>
-            <div className={styles.barGroup}>
-              <div className={styles.barLabel}>Degraded ({healthDist.counts.degraded})</div>
-              <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${healthDist.pcts.degraded}%`, background: 'var(--status-degraded)' }}/></div>
-              <div className={styles.barValue}>{Math.round(healthDist.pcts.degraded)}%</div>
-            </div>
-            <div className={styles.barGroup}>
-              <div className={styles.barLabel}>Critical ({healthDist.counts.critical})</div>
-              <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${healthDist.pcts.critical}%`, background: 'var(--status-critical)' }}/></div>
-              <div className={styles.barValue}>{Math.round(healthDist.pcts.critical)}%</div>
-            </div>
-          </div>
-        </Card>
+  const renderFleetView = () => {
+    const c_healthy = getComputedVar('--status-healthy') || '#10B981';
+    const c_warning = getComputedVar('--status-warning') || '#F59E0B';
+    const c_degraded = getComputedVar('--status-degraded') || '#F97316';
+    const c_critical = getComputedVar('--status-critical') || '#EF4444';
+    const c_brand = getComputedVar('--brand-primary') || '#EAB308';
+    
+    const doughnutData = {
+      labels: ['Healthy', 'Warning', 'Degraded', 'Critical'],
+      datasets: [
+        {
+          data: [healthDist.healthy, healthDist.warning, healthDist.degraded, healthDist.critical],
+          backgroundColor: [c_healthy, c_warning, c_degraded, c_critical],
+          borderWidth: 0,
+        },
+      ],
+    };
 
-        <Card className={styles.chartPlaceholder}>
-          <h3 className="text-section-heading">Component Risk Distribution</h3>
-          <p className="text-muted text-tiny mt-1 mb-4">Fleet-wide average risk percentages by subsystem</p>
-          <div className={styles.barChart}>
-            <div className={styles.barGroup}>
-              <div className={styles.barLabel}>Gearbox</div>
-              <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${Math.min(100, Math.max(5, componentRisks.gearbox))}%`, background: componentRisks.gearbox > 30 ? 'var(--status-critical)' : 'var(--brand-primary)' }}/></div>
-              <div className={styles.barValue}>{componentRisks.gearbox.toFixed(1)}%</div>
-            </div>
-            <div className={styles.barGroup}>
-              <div className={styles.barLabel}>Generator</div>
-              <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${Math.min(100, Math.max(5, componentRisks.generator))}%`, background: componentRisks.generator > 30 ? 'var(--status-critical)' : 'var(--brand-primary)' }}/></div>
-              <div className={styles.barValue}>{componentRisks.generator.toFixed(1)}%</div>
-            </div>
-            <div className={styles.barGroup}>
-              <div className={styles.barLabel}>Bearing</div>
-              <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${Math.min(100, Math.max(5, componentRisks.bearing))}%`, background: componentRisks.bearing > 30 ? 'var(--status-critical)' : 'var(--brand-primary)' }}/></div>
-              <div className={styles.barValue}>{componentRisks.bearing.toFixed(1)}%</div>
-            </div>
-            <div className={styles.barGroup}>
-              <div className={styles.barLabel}>Yaw System</div>
-              <div className={styles.barTrack}><div className={styles.barFill} style={{ width: `${Math.min(100, Math.max(5, componentRisks.yaw))}%`, background: componentRisks.yaw > 30 ? 'var(--status-warning)' : 'var(--brand-primary)' }}/></div>
-              <div className={styles.barValue}>{componentRisks.yaw.toFixed(1)}%</div>
-            </div>
-          </div>
-        </Card>
+    const radarData = {
+      labels: ['Gearbox', 'Generator', 'Bearing', 'Yaw System', 'Pitch Drive', 'Electrical'],
+      datasets: [
+        {
+          label: 'Average Risk %',
+          data: [
+            componentRisks.gearbox,
+            componentRisks.generator,
+            componentRisks.bearing,
+            componentRisks.yaw,
+            componentRisks.pitch,
+            componentRisks.electrical
+          ],
+          backgroundColor: `${c_brand}40`,
+          borderColor: c_brand,
+          pointBackgroundColor: c_brand,
+          borderWidth: 2,
+        },
+      ],
+    };
 
-        {/* 30 TURBINE x 6 COMPONENT RISK & ANOMALY HEATMAP MATRIX */}
-        <Card className={styles.heatmapCard}>
-          <div className={styles.heatmapHeader}>
-            <div>
-              <h3 className="text-section-heading">Fleet Risk & Anomaly Heatmap Matrix</h3>
-              <p className="text-muted text-tiny mt-1">Single-screen control-center view: 30 Turbines (T01 → T30) × 6 Component Subsystems</p>
+    const fleetTrendData = {
+      labels: fleetHistory24h.map(h => h.label).reverse(),
+      datasets: [
+        {
+          label: 'Actual Power (MWh)',
+          data: fleetHistory24h.map(h => h.actualMWh).reverse(),
+          borderColor: c_brand,
+          backgroundColor: `${c_brand}20`,
+          fill: true,
+          tension: 0.4,
+        },
+        {
+          label: 'Expected Power (MWh)',
+          data: fleetHistory24h.map(h => h.expectedMWh).reverse(),
+          borderColor: c_healthy,
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.4,
+        }
+      ]
+    };
+
+    const radarOptions = {
+      ...chartOptions,
+      animation: { duration: 500 },
+      plugins: {
+        ...chartOptions.plugins,
+        legend: { display: false } // Hide legend to maximize radar size
+      },
+      scales: {
+        r: {
+          angleLines: { color: getComputedVar('--border') },
+          grid: { color: getComputedVar('--border') },
+          pointLabels: { color: getComputedVar('--text-primary'), font: { size: 12 } },
+          ticks: { display: false, max: 100, min: 0 }
+        }
+      }
+    };
+
+    const doughnutOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 500 },
+      layout: { padding: 20 },
+      plugins: {
+        legend: {
+          position: 'right' as const,
+          labels: { color: getComputedVar('--text-primary'), padding: 20, font: { size: 13 } }
+        }
+      },
+      cutout: '75%'
+    };
+
+    return (
+      <>
+        <div className={styles.kpiStrip}>
+          <KPI label="FLEET POWER" value={(summary.current_power_kw / 1000).toFixed(2)} unit="MW" secondary="Total active power" />
+          <KPI label="FLEET EXPECTED" value={(summary.expected_power_kw / 1000).toFixed(2)} unit="MW" secondary="Based on conditions" />
+          <KPI label="AVAILABILITY" value={summary.availability_pct.toFixed(1)} unit="%" secondary="Fleet wide" accent={summary.availability_pct > 95 ? 'healthy' : 'warning'} />
+          <KPI label="LOSS ESTIMATE" value={((summary.expected_power_kw - summary.current_power_kw) * 24 / 1000).toFixed(2)} unit="MWh" secondary="24h projection" accent="degraded" />
+        </div>
+
+        <div className={styles.grid}>
+          <Card className={styles.chartPlaceholder}>
+            <h3 className="text-section-heading">Fleet Health Distribution</h3>
+            <p className="text-muted text-tiny mt-1 mb-2">Breakdown of operational health status across {fleet.length} assets</p>
+            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
+              <Doughnut data={doughnutData} options={doughnutOptions} />
             </div>
-            <div className={styles.heatmapLegend}>
-              <div className={styles.legendItem}>
-                <div className={styles.legendBox} style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid var(--status-healthy)' }} />
-                <span>Normal (&lt;30%)</span>
+          </Card>
+
+          <Card className={styles.chartPlaceholder}>
+            <h3 className="text-section-heading">Component Risk Distribution</h3>
+            <p className="text-muted text-tiny mt-1 mb-2">Fleet-wide average risk percentages by subsystem</p>
+            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
+              <Radar data={radarData} options={radarOptions} />
+            </div>
+          </Card>
+
+          <Card className={styles.heatmapCard}>
+            <div className={styles.heatmapHeader} style={{ padding: '20px 24px 0', borderBottom: 'none' }}>
+              <div>
+                <h3 className="text-section-heading">Fleet Generation Trend (24h)</h3>
+                <p className="text-muted text-tiny mt-1">Actual vs Expected Generation MWh</p>
               </div>
-              <div className={styles.legendItem}>
-                <div className={styles.legendBox} style={{ background: 'rgba(234, 179, 8, 0.25)', border: '1px solid var(--status-warning)' }} />
-                <span>Warning (30–60%)</span>
+            </div>
+            <div style={{ height: '260px', width: '100%', padding: '0 24px 24px' }}>
+              <Line data={fleetTrendData} options={{...chartOptions, animation: { duration: 500 }}} />
+            </div>
+          </Card>
+
+          {/* 30 TURBINE x 6 COMPONENT RISK & ANOMALY HEATMAP MATRIX */}
+          <Card className={styles.heatmapCard}>
+            <div className={styles.heatmapHeader}>
+              <div>
+                <h3 className="text-section-heading">Fleet Risk & Anomaly Heatmap Matrix</h3>
+                <p className="text-muted text-tiny mt-1">Single-screen control-center view: 30 Turbines (T01 → T30) × 6 Component Subsystems</p>
               </div>
-              <div className={styles.legendItem}>
-                <div className={styles.legendBox} style={{ background: 'rgba(239, 68, 68, 0.3)', border: '1px solid var(--status-critical)' }} />
-                <span>Critical (&gt;60%)</span>
+              <div className={styles.heatmapLegend}>
+                <div className={styles.legendItem}>
+                  <div className={styles.legendBox} style={{ background: 'rgba(34, 197, 94, 0.2)', border: '1px solid var(--status-healthy)' }} />
+                  <span>Normal (&lt;30%)</span>
+                </div>
+                <div className={styles.legendItem}>
+                  <div className={styles.legendBox} style={{ background: 'rgba(234, 179, 8, 0.25)', border: '1px solid var(--status-warning)' }} />
+                  <span>Warning (30–60%)</span>
+                </div>
+                <div className={styles.legendItem}>
+                  <div className={styles.legendBox} style={{ background: 'rgba(239, 68, 68, 0.3)', border: '1px solid var(--status-critical)' }} />
+                  <span>Critical (&gt;60%)</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className={styles.heatmapGridWrapper}>
-            <table className={styles.heatmapTable}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', paddingLeft: '16px' }}>Asset ID</th>
-                  <th>Gearbox</th>
-                  <th>Generator</th>
-                  <th>Bearing</th>
-                  <th>Yaw System</th>
-                  <th>Pitch Drive</th>
-                  <th>Electrical</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fleet.map((t) => {
-                  const components = [
-                    { key: 'gearbox', name: 'Gearbox', risk: t.features.gearbox_risk },
-                    { key: 'generator', name: 'Generator', risk: t.scenario === 'generator_overheating' ? 88 : (t.features.gearbox_risk > 50 ? 45 : 5) },
-                    { key: 'bearing', name: 'Bearing', risk: t.scenario === 'bearing_degradation' ? 78 : (t.features.gearbox_risk > 50 ? 55 : 5) },
-                    { key: 'yaw', name: 'Yaw System', risk: t.features.yaw_risk },
-                    { key: 'pitch', name: 'Pitch Drive', risk: t.features.pitch_imbalance_deg > 2 ? 65 : 5 },
-                    { key: 'electrical', name: 'Electrical', risk: t.scenario === 'grid_event' ? 72 : 5 },
-                  ];
+            <div className={styles.heatmapGridWrapper}>
+              <table className={styles.heatmapTable}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', paddingLeft: '16px' }}>Asset ID</th>
+                    <th>Gearbox</th>
+                    <th>Generator</th>
+                    <th>Bearing</th>
+                    <th>Yaw System</th>
+                    <th>Pitch Drive</th>
+                    <th>Electrical</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fleet.map((t) => {
+                    const components = [
+                      { key: 'gearbox', name: 'Gearbox', risk: t.features.gearbox_risk },
+                      { key: 'generator', name: 'Generator', risk: t.scenario === 'generator_overheating' ? 88 : (t.features.gearbox_risk > 50 ? 45 : 5) },
+                      { key: 'bearing', name: 'Bearing', risk: t.scenario === 'bearing_degradation' ? 78 : (t.features.gearbox_risk > 50 ? 55 : 5) },
+                      { key: 'yaw', name: 'Yaw System', risk: t.features.yaw_risk },
+                      { key: 'pitch', name: 'Pitch Drive', risk: t.features.pitch_imbalance_deg > 2 ? 65 : 5 },
+                      { key: 'electrical', name: 'Electrical', risk: t.scenario === 'grid_event' ? 72 : 5 },
+                    ];
 
-                  return (
-                    <tr key={t.id}>
-                      <td 
-                        className={styles.turbineCell}
-                        onClick={() => {
-                          setSelectedId(t.id);
-                          setView('INDIVIDUAL');
-                        }}
-                      >
-                        {t.id} <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400 }}>({t.farm_id})</span>
-                      </td>
-                      {components.map((c) => {
-                        const r = Math.round(c.risk);
-                        const tileClass = r > 60 ? styles.riskCritical : r > 30 ? styles.riskWarning : styles.riskNormal;
-                        return (
-                          <td key={c.key}>
-                            <div 
-                              className={`${styles.riskTile} ${tileClass}`}
-                              title={`${t.id} ${c.name}: ${r}% Failure Risk`}
-                              onClick={() => {
-                                setSelectedId(t.id);
-                                setView('INDIVIDUAL');
-                              }}
-                            >
-                              {r}%
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    </>
-  );
+                    return (
+                      <tr key={t.id}>
+                        <td 
+                          className={styles.turbineCell}
+                          onClick={() => {
+                            setSelectedId(t.id);
+                            setView('INDIVIDUAL');
+                          }}
+                        >
+                          {t.id} <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400 }}>({t.farm_id})</span>
+                        </td>
+                        {components.map((c) => {
+                          const r = Math.round(c.risk);
+                          const tileClass = r > 60 ? styles.riskCritical : r > 30 ? styles.riskWarning : styles.riskNormal;
+                          return (
+                            <td key={c.key}>
+                              <div 
+                                className={`${styles.riskTile} ${tileClass}`}
+                                title={`${t.id} ${c.name}: ${r}% Failure Risk`}
+                                onClick={() => {
+                                  setSelectedId(t.id);
+                                  setView('INDIVIDUAL');
+                                }}
+                              >
+                                {r}%
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      </>
+    );
+  };
 
   const renderIndividualView = () => {
     if (!turbine) return null;
 
-    // Wind speed cut-in 3 to 25 m/s power curve points generator
-    const curvePoints: string[] = [];
+    const c_healthy = getComputedVar('--status-healthy') || '#10B981';
+    const c_warning = getComputedVar('--status-warning') || '#F59E0B';
+    const c_muted = getComputedVar('--text-muted') || '#64748B';
+    const c_brand = getComputedVar('--brand-primary') || '#EAB308';
+
+    // Scatter Data for Power Curve
+    const scatterCurvePoints = [];
     for (let v = 0; v <= 25; v += 0.5) {
       let p = Math.pow(Math.max(0, v - 3), 3) * 10;
       p = Math.min(2100, Math.max(0, p));
-      const x = (v / 25) * 100;
-      const y = 100 - (p / 2100) * 90 - 5;
-      curvePoints.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+      scatterCurvePoints.push({ x: v, y: p / 1000 }); // MW
     }
 
-    // Operating point coordinates
-    const opX = Math.min(100, Math.max(0, (turbine.telemetry.wind_speed_mps / 25) * 100));
-    const opY = Math.min(100, Math.max(0, 100 - (turbine.telemetry.power_kw / 2100) * 90 - 5));
+    const currentWind = turbine.telemetry.wind_speed_mps;
+    const currentPower = turbine.telemetry.power_kw / 1000;
 
-    // Trend SVG paths
-    const hDenom = (history24h && history24h.length > 1) ? history24h.length - 1 : 1;
-    const vibPoints = (history24h || []).map((h, i) => {
-      const x = (i / hDenom) * 100;
-      const y = 100 - Math.min(100, ((h.vibration_rms_mm_s || 0) / 8) * 100);
-      return `${isFinite(x) ? x.toFixed(1) : '0'},${isFinite(y) ? y.toFixed(1) : '50'}`;
-    }).join(' ');
+    const powerCurveData = {
+      datasets: [
+        {
+          label: 'Theoretical Curve',
+          data: scatterCurvePoints,
+          borderColor: c_muted,
+          borderDash: [5, 5],
+          showLine: true,
+          fill: false,
+          pointRadius: 0,
+          tension: 0.4
+        },
+        {
+          label: 'Live Operating Point',
+          data: [{ x: currentWind, y: currentPower }],
+          backgroundColor: c_brand,
+          borderColor: getComputedVar('--surface'),
+          showLine: false,
+          pointRadius: 8,
+          pointHoverRadius: 10,
+        }
+      ]
+    };
 
-    const tempPoints = (history24h || []).map((h, i) => {
-      const x = (i / hDenom) * 100;
-      const y = 100 - Math.min(100, ((((h.gearbox_temperature_c || 65) - 30) / 70) * 100));
-      return `${isFinite(x) ? x.toFixed(1) : '0'},${isFinite(y) ? y.toFixed(1) : '50'}`;
-    }).join(' ');
+    const powerCurveOptions = {
+      ...chartOptions,
+      scales: {
+        ...chartOptions.scales,
+        x: {
+          ...chartOptions.scales?.x,
+          type: 'linear' as const,
+          title: { display: true, text: 'Wind Speed (m/s)', color: getComputedVar('--text-secondary') },
+          min: 0,
+          max: 25
+        },
+        y: {
+          ...chartOptions.scales?.y,
+          title: { display: true, text: 'Power (MW)', color: getComputedVar('--text-secondary') },
+          min: 0,
+          max: 2.2
+        }
+      }
+    };
+
+    // Mechanical Trends Line Data
+    const revHistory = [...(history24h || [])].reverse();
+    const trendData = {
+      labels: revHistory.map(h => h.timeLabel),
+      datasets: [
+        {
+          label: 'Vibration RMS (mm/s)',
+          data: revHistory.map(h => h.vibration_rms_mm_s),
+          borderColor: c_warning,
+          backgroundColor: c_warning,
+          yAxisID: 'y',
+          tension: 0.4,
+          pointRadius: 0,
+          pointHitRadius: 10,
+        },
+        {
+          label: 'Gearbox Temp (°C)',
+          data: revHistory.map(h => h.gearbox_temperature_c),
+          borderColor: c_healthy,
+          backgroundColor: c_healthy,
+          yAxisID: 'y1',
+          tension: 0.4,
+          pointRadius: 0,
+          pointHitRadius: 10,
+        }
+      ]
+    };
+
+    const trendOptions = {
+      ...chartOptions,
+      scales: {
+        ...chartOptions.scales,
+        y: {
+          type: 'linear' as const,
+          display: true,
+          position: 'left' as const,
+          title: { display: true, text: 'Vibration (mm/s)', color: c_warning },
+          grid: { color: getComputedVar('--border') }
+        },
+        y1: {
+          type: 'linear' as const,
+          display: true,
+          position: 'right' as const,
+          title: { display: true, text: 'Temperature (°C)', color: c_healthy },
+          grid: { drawOnChartArea: false }, 
+        },
+      }
+    };
 
     return (
       <>
@@ -248,34 +473,15 @@ export function Analytics() {
           <Card className={styles.chartPlaceholder}>
             <h3 className="text-section-heading">Power Curve Profile ({turbine.id})</h3>
             <p className="text-muted text-body mt-1 mb-2">Theoretical power curve vs live operating point</p>
-            <div className={styles.mockCurveChart}>
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
-                <polyline points={curvePoints.join(' ')} fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeDasharray="3" />
-              </svg>
-              <div 
-                className={styles.mockPoint} 
-                style={{ top: `${opY}%`, left: `${opX}%` }} 
-                title={`${turbine.id}: ${turbine.telemetry.wind_speed_mps.toFixed(1)} m/s, ${(turbine.telemetry.power_kw / 1000).toFixed(2)} MW`}
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-              <span>0 m/s (Cut-in 3m/s)</span>
-              <span>12.5 m/s (Rated)</span>
-              <span>25 m/s (Cut-out)</span>
+            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
+              <Scatter data={powerCurveData} options={powerCurveOptions} />
             </div>
           </Card>
 
           <Card className={styles.chartPlaceholder}>
             <h3 className="text-section-heading">Mechanical Trends 24h ({turbine.id})</h3>
-            <div style={{ display: 'flex', gap: '16px', fontSize: '12px', marginTop: '4px', marginBottom: '8px' }}>
-              <span style={{ color: 'var(--status-warning)' }}>─ Vibration RMS (mm/s)</span>
-              <span style={{ color: 'var(--status-healthy)' }}>─ Gearbox Temp (°C)</span>
-            </div>
-            <div className={styles.trendChart}>
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '180px' }}>
-                <polyline points={vibPoints} fill="none" stroke="var(--status-warning)" strokeWidth="2.5" />
-                <polyline points={tempPoints} fill="none" stroke="var(--status-healthy)" strokeWidth="2.5" />
-              </svg>
+            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0, marginTop: '20px' }}>
+              <Line data={trendData} options={trendOptions} />
             </div>
           </Card>
         </div>
@@ -309,4 +515,3 @@ export function Analytics() {
     </div>
   );
 }
-

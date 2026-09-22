@@ -34,6 +34,14 @@ export function TurbineDetail() {
     }
   };
 
+  const orbClass = t.status === 'CRITICAL' || f.health_score < 40 
+    ? styles.orbCritical 
+    : t.status === 'DEGRADED' || f.health_score < 60 
+    ? styles.orbDegraded 
+    : t.status === 'WARNING' || f.health_score < 80 
+    ? styles.orbWarning 
+    : styles.orbNormal;
+
   return (
     <div className={styles.container}>
       <div className={styles.hero}>
@@ -50,8 +58,10 @@ export function TurbineDetail() {
           </select>
           <button onClick={injectScenario} className={styles.btnInject}>Inject Scenario</button>
         </div>
-        <div className={styles.orb}>
-          <strong>{Math.round(f.health_score)}</strong>
+        <div className={`${styles.orb} ${orbClass}`}>
+          <strong style={{ color: t.status === 'CRITICAL' || f.health_score < 40 ? 'var(--status-critical)' : undefined }}>
+            {Math.round(f.health_score)}
+          </strong>
           <span>HEALTH</span>
         </div>
       </div>
@@ -77,14 +87,15 @@ export function TurbineDetail() {
               {cmp.map(c => {
                 const risk = f[`${c}_risk`];
                 const health = 100 - risk;
+                const isCompCritical = risk > 50;
                 return (
                   <div key={c} className={styles.componentRow}>
-                    <span className={styles.componentName}>{c}</span>
+                    <span className={styles.componentName} style={{ color: isCompCritical ? 'var(--status-critical)' : undefined, fontWeight: isCompCritical ? 700 : 500 }}>{c}</span>
                     <div className={styles.healthBarBg}>
-                      <div className={styles.healthBarFill} style={{ width: `${health}%`, backgroundColor: risk > 50 ? 'var(--status-critical)' : 'var(--status-healthy)' }} />
+                      <div className={styles.healthBarFill} style={{ width: `${health}%`, backgroundColor: isCompCritical ? 'var(--status-critical)' : 'var(--status-healthy)' }} />
                     </div>
-                    <span className={styles.healthScore}>{Math.round(health)}</span>
-                    <span className={styles.riskLabel}>risk {Math.round(risk)}%</span>
+                    <span className={styles.healthScore} style={{ color: isCompCritical ? 'var(--status-critical)' : undefined }}>{Math.round(health)}</span>
+                    <span className={styles.riskLabel} style={{ color: isCompCritical ? 'var(--status-critical)' : undefined, fontWeight: isCompCritical ? 600 : 400 }}>risk {Math.round(risk)}%</span>
                   </div>
                 );
               })}

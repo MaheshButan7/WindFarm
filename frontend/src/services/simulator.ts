@@ -103,21 +103,21 @@ export class Simulator {
       const expectedPower = Math.pow(Math.max(0, windSpeed - 3), 3) * 10;
       let actualPower = expectedPower;
       
-      let tempGbx = 65 + noise(2);
-      let vibGbx = 1.2 + noise(0.2);
-      let riskGbx = 5 + noise(2);
-      let riskYaw = 5 + noise(2);
-      let yawError = noise(2);
+      let tempGbx = 65 + noise(1);
+      let vibGbx = 1.2 + noise(0.1);
+      let riskGbx = 5 + noise(0.1);
+      let riskYaw = 5 + noise(0.1);
+      let yawError = noise(0.5);
       
       // Scenario overrides
       if (t.scenario === 'gearbox_degradation') {
-        tempGbx = 85 + noise(5);
-        vibGbx = 5.8 + noise(0.5);
-        riskGbx = 82 + noise(5);
+        tempGbx = 85 + noise(2);
+        vibGbx = 5.8 + noise(0.2);
+        riskGbx = 82 + noise(0.2);
         actualPower = expectedPower * 0.85; // 15% efficiency loss
       } else if (t.scenario === 'yaw_misalignment') {
-        yawError = 15 + noise(3);
-        riskYaw = 65 + noise(5);
+        yawError = 15 + noise(1);
+        riskYaw = 65 + noise(0.2);
         actualPower = expectedPower * 0.88; 
       } else if (t.scenario === 'generator_overheating') {
         actualPower = expectedPower * 0.90;
@@ -144,18 +144,18 @@ export class Simulator {
       t.telemetry.expected_power_kw = expPowerCap;
       t.telemetry.gearbox_temperature_c = tempGbx;
       t.telemetry.vibration_rms_mm_s = vibGbx;
-      t.telemetry.grid_voltage_v = 690 + noise(5);
-      t.telemetry.grid_frequency_hz = 50.0 + noise(0.05);
-      t.telemetry.oil_temperature_c = 58 + noise(1);
+      t.telemetry.grid_voltage_v = 690 + noise(2);
+      t.telemetry.grid_frequency_hz = 50.0 + noise(0.02);
+      t.telemetry.oil_temperature_c = 58 + noise(0.5);
       
       t.features.power_residual_pct = residualPct;
       t.features.yaw_error_deg = yawError;
-      t.features.pitch_imbalance_deg = noise(0.2);
+      t.features.pitch_imbalance_deg = noise(0.1);
       t.features.gearbox_risk = riskGbx;
       t.features.yaw_risk = riskYaw;
       t.features.overall_failure_risk = overallRisk;
       t.features.health_score = health;
-      t.features.component_health_score = health + noise(2);
+      t.features.component_health_score = health;
       t.features.anomaly_score = overallRisk * 0.9;
     });
 
@@ -293,17 +293,70 @@ export class Simulator {
       .sort((a, b) => b.risk - a.risk);
   }
 
-  // Generate mock history for a single turbine (7 days, 24 * 7 points)
-  public getHistory(turbine_id: string, hours = 168): any[] {
+  // Generate detailed history for a single turbine
+  public getHistory(turbine_id: string, hours = 24): any[] {
     const history = [];
     const now = Date.now();
+    const turbine = this.getTurbine(turbine_id);
+    const baseTemp = turbine ? turbine.telemetry.gearbox_temperature_c : 65;
+    const baseVib = turbine ? turbine.telemetry.vibration_rms_mm_s : 1.2;
+
     for (let i = hours; i >= 0; i--) {
       const ts = new Date(now - i * 3600000);
-      // Mock data
+      const hourSin = Math.sin((24 - i) / 3);
       history.push({
         timestamp: ts.toISOString(),
-        power_kw: 1500 + noise(300),
-        expected_power_kw: 1600 + noise(100),
+        timeLabel: `${ts.getHours()}:00`,
+        power_kw: Math.max(0, 1400 + hourSin * 400 + noise(150)),
+        expected_power_kw: Math.max(0, 1550 + hourSin * 400 + noise(50)),
+        vibration_rms_mm_s: Math.max(0.5, baseVib + hourSin * 0.4 + noise(0.2)),
+        gearbox_temperature_c: Math.max(40, baseTemp + hourSin * 3 + noise(1.5)),
+        wind_speed_mps: Math.max(3, 8.0 + hourSin * 2 + noise(1)),
+      });
+    }
+    return history;
+  }
+
+  // Calculate fleet-wide average component risks
+  public getFleetComponentRisks() {
+    if (this.turbines.length === 0) {
+      return { gearbox: 5, generator: 5, bearing: 5, yaw: 5, pitch: 5, electrical: 5 };
+    }
+    let totalGbx = 0, totalGen = 0, totalBrg = 0, totalYaw = 0, totalPitch = 0, totalElec = 0;
+    this.turbines.forEach(t => {
+      totalGbx += t.features.gearbox_risk;
+      totalGen += t.features.generator_risk;
+      totalBrg += t.features.bearing_risk;
+      totalYaw += t.features.yaw_risk;
+      totalPitch += t.features.pitch_risk;
+      totalElec += t.features.electrical_risk;
+    });
+    const n = this.turbines.length;
+    return {
+      gearbox: totalGbx / n,
+      generator: totalGen / n,
+      bearing: totalBrg / n,
+      yaw: totalYaw / n,
+      pitch: totalPitch / n,
+      electrical: totalElec / n,
+    };
+  }
+
+  // Generate fleet performance history for trends and charts
+  public getFleetHistory(hours = 24) {
+    const history = [];
+    const now = Date.now();
+    for (let i = hours; i >= 0; i -= 2) {
+      const ts = new Date(now - i * 3600000);
+      const timeSin = Math.sin((24 - i) / 4);
+      const actualPowerMWh = Math.max(30, 42.5 + timeSin * 8 + noise(2));
+      const expectedPowerMWh = Math.max(35, 45.0 + timeSin * 8 + noise(0.5));
+      history.push({
+        timestamp: ts.toISOString(),
+        label: `${ts.getHours().toString().padStart(2, '0')}:00`,
+        actualMWh: actualPowerMWh,
+        expectedMWh: expectedPowerMWh,
+        health: Math.max(70, 88 + timeSin * 3 + noise(1)),
       });
     }
     return history;
@@ -312,3 +365,4 @@ export class Simulator {
 
 // Global singleton instance for the app
 export const globalSimulator = new Simulator();
+

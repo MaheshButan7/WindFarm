@@ -15,20 +15,35 @@ export function Turbines() {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [showModal, setShowModal] = useState(false);
 
+  const statusRank: Record<string, number> = {
+    CRITICAL: 0,
+    DEGRADED: 1,
+    WARNING: 2,
+    NORMAL: 3,
+    OFFLINE: 4
+  };
+
   const rows = useMemo(() => {
     return fleet
       .filter(t => (farmFilter === 'All Farms' || t.farm_id === farmFilter))
       .filter(t => (statusFilter === 'All Status' || t.status === statusFilter.toUpperCase()))
       .filter(t => t.id.toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => b.features.overall_failure_risk - a.features.overall_failure_risk);
+      .sort((a, b) => {
+        const rankDiff = (statusRank[a.status] ?? 3) - (statusRank[b.status] ?? 3);
+        if (rankDiff !== 0) return rankDiff;
+        return a.id.localeCompare(b.id);
+      });
   }, [fleet, search, farmFilter, statusFilter]);
+
+  const onlineCount = fleet.filter(t => t.status !== 'OFFLINE').length;
+  const criticalCount = fleet.filter(t => t.status === 'CRITICAL').length;
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
           <h1 className="text-page-title">Turbines</h1>
-          <p className="text-muted">30 Assets · {fleet.filter(t=>t.status==='NORMAL').length} Active · {fleet.filter(t=>t.status==='CRITICAL').length} Critical</p>
+          <p className="text-muted">{fleet.length} Assets · {onlineCount} Online · {criticalCount} Critical</p>
         </div>
         
         <div className={styles.controls}>

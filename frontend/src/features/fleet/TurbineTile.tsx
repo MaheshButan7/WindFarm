@@ -51,18 +51,22 @@ export function TurbineTile({ turbine }: TurbineTileProps) {
         </div>
         <div className={styles.metricRow}>
           <span className={styles.metricLabel}>Vibration</span>
-          <span className={styles.metricValue}>{t.vibration_rms_mm_s.toFixed(1)} mm/s</span>
+          <span className={cn(styles.metricValue, (t.vibration_rms_mm_s > 4.5 || (turbine.status === 'CRITICAL' && turbine.scenario === 'gearbox_degradation')) && styles.highRisk)}>
+            {t.vibration_rms_mm_s.toFixed(1)} mm/s
+          </span>
         </div>
         <div className={styles.metricRow}>
           <span className={styles.metricLabel}>Gearbox</span>
-          <span className={styles.metricValue}>{Math.round(t.gearbox_temperature_c)}°C</span>
+          <span className={cn(styles.metricValue, (t.gearbox_temperature_c > 80 || (turbine.status === 'CRITICAL' && turbine.scenario === 'gearbox_degradation')) && styles.highRisk)}>
+            {Math.round(t.gearbox_temperature_c)}°C
+          </span>
         </div>
       </div>
 
       <div className={styles.footer}>
         <div className={styles.riskRow}>
           <span className={styles.metricLabel}>Risk</span>
-          <span className={cn(styles.riskValue, f.overall_failure_risk > 50 && styles.highRisk)}>
+          <span className={cn(styles.riskValue, (f.overall_failure_risk > 50 || turbine.status === 'CRITICAL') && styles.highRisk)}>
             {Math.round(f.overall_failure_risk)}%
           </span>
         </div>

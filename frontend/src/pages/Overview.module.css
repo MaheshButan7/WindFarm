@@ -24,18 +24,74 @@
   gap: 16px;
 }
 
-.envGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.envItem {
+.envCard {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
+  height: 100%;
+}
+
+.envGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  flex: 1;
+}
+
+.envTile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+}
+
+.envTile:hover {
+  border-color: var(--brand-primary);
+  transform: translateY(-1px);
+}
+
+.envIconWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-primary);
+  flex-shrink: 0;
+}
+
+.envContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.envLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.envValue {
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.envSubtext {
+  font-size: 10px;
+  color: var(--status-healthy);
+  font-weight: 500;
 }
 
 .statusVisual {
@@ -114,11 +170,11 @@
 .gisMap {
   position: relative;
   flex: 1;
-  min-height: 200px;
+  min-height: 220px;
   background: radial-gradient(circle at 30% 40%, var(--bg-primary) 0, transparent 40%),
               radial-gradient(circle at 70% 60%, var(--bg-secondary) 0, transparent 40%);
   border-radius: 0 0 12px 12px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .gisMap::before {
@@ -145,6 +201,11 @@
   align-items: center;
   gap: 2px;
   z-index: 10;
+  cursor: pointer;
+}
+
+.mapDot:hover {
+  z-index: 50;
 }
 
 .dotCore {
@@ -153,6 +214,12 @@
   border-radius: 50%;
   border: 2px solid var(--surface);
   box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mapDot:hover .dotCore {
+  transform: scale(1.4);
+  box-shadow: 0 0 10px var(--brand-primary);
 }
 
 .dotNORMAL { background-color: var(--status-healthy); }
@@ -161,6 +228,66 @@
 .dotCRITICAL { 
   background-color: var(--status-critical);
   box-shadow: 0 0 8px var(--status-critical);
+}
+
+.tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltipAbove {
+  bottom: calc(100% + 8px);
+}
+
+.tooltipBelow {
+  top: calc(100% + 8px);
+}
+
+.mapDot:hover .tooltipAbove {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.mapDot:hover .tooltipBelow {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(2px);
+}
+
+.tooltipHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.tooltipCoords {
+  font-size: 11px;
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+.tooltipMetrics {
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 .dotLabel {

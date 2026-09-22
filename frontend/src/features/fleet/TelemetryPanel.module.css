@@ -49,6 +49,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  transition: all 0.2s ease;
 }
 
 .label {
@@ -62,6 +63,38 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.cellCritical {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  border-radius: 4px;
+}
+
+.cellCritical .label {
+  color: var(--status-critical) !important;
+  font-weight: 700;
+}
+
+.cellCritical .value {
+  color: var(--status-critical) !important;
+  font-weight: 700;
+}
+
+.cellWarning {
+  background: rgba(234, 179, 8, 0.1) !important;
+  border: 1px solid rgba(234, 179, 8, 0.3) !important;
+  border-radius: 4px;
+}
+
+.cellWarning .label {
+  color: var(--status-warning) !important;
+  font-weight: 600;
+}
+
+.cellWarning .value {
+  color: var(--status-warning) !important;
+  font-weight: 700;
 }
 
 @media (max-width: 1024px) {

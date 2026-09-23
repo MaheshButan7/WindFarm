@@ -25,10 +25,7 @@ export function Copilot() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className="text-page-title">Intelligence</h1>
-        <p className="text-muted">AI Suggestions and Conversational Copilot</p>
-      </div>
+
 
       <div className={styles.grid}>
         <div className={styles.leftPanel}>

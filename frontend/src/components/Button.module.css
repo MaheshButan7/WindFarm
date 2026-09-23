@@ -16,7 +16,7 @@
 /* Variants */
 .primary {
   background-color: var(--brand-primary);
-  color: #FFFFFF;
+  color: #0F172A;
 }
 .primary:hover:not(:disabled) {
   background-color: var(--brand-secondary);

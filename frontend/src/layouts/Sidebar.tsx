@@ -23,7 +23,7 @@ const navItems = [
   { path: '/', label: 'Overview', icon: LayoutDashboard },
   { path: '/turbines', label: 'Turbines', icon: Wind },
   { path: '/analytics', label: 'Analytics', icon: LineChart },
-  { path: '/alerts', label: 'Alerts', icon: BellRing },
+  { path: '/alerts', label: 'Events', icon: BellRing },
   { path: '/maintenance', label: 'Maintenance', icon: Wrench },
   { path: '/copilot', label: 'Intelligence', icon: Bot },
 ];
@@ -35,8 +35,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         <img src="/baellchen_logo.png" alt="Logo" className={styles.logo} />
         {!collapsed && (
           <div className={styles.brandText}>
-            <strong>Wind Asset</strong>
-            <span>Intelligence</span>
+            <strong>WindFarm</strong>
           </div>
         )}
       </div>

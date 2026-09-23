@@ -217,6 +217,7 @@
   font-weight: 600;
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
+  text-align: left;
 }
 
 .table td {
@@ -225,6 +226,7 @@
   font-size: 14px;
   font-weight: 500;
   vertical-align: middle;
+  text-align: left;
 }
 
 .tableRow {
@@ -421,7 +423,7 @@
   padding: 12px;
   background: var(--brand-primary);
   border: none;
-  color: white;
+  color: #0F172A;
   border-radius: 6px;
   font-weight: 600;
   cursor: pointer;

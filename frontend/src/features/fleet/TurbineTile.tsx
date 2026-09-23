@@ -15,7 +15,7 @@ export function TurbineTile({ turbine }: TurbineTileProps) {
   const f = turbine.features;
 
   return (
-    <Card 
+    <Card
       className={cn(styles.tile, styles[turbine.status.toLowerCase()])}
       onClick={() => navigate(`/turbines/${turbine.id}`)}
       padding="compact"
@@ -32,11 +32,11 @@ export function TurbineTile({ turbine }: TurbineTileProps) {
         <div className={styles.healthLabel}>Health</div>
         <div className={styles.healthValue}>{Math.round(f.health_score)}</div>
       </div>
-      
+
       <div className={styles.healthBar}>
-        <div 
-          className={cn(styles.healthFill, styles[`bg-${turbine.status.toLowerCase()}`])} 
-          style={{ width: `${f.health_score}%` }} 
+        <div
+          className={cn(styles.healthFill, styles[`bg-${turbine.status.toLowerCase()}`])}
+          style={{ width: `${f.health_score}%` }}
         />
       </div>
 

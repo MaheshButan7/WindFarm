@@ -136,7 +136,7 @@ export function Analytics() {
     const c_degraded = getComputedVar('--status-degraded') || '#F97316';
     const c_critical = getComputedVar('--status-critical') || '#EF4444';
     const c_brand = getComputedVar('--brand-primary') || '#EAB308';
-    
+
     const doughnutData = {
       labels: ['Healthy', 'Warning', 'Degraded', 'Critical'],
       datasets: [
@@ -225,15 +225,15 @@ export function Analytics() {
     return (
       <>
         <div className={styles.kpiStrip}>
-          <KPI label="FLEET POWER" value={(summary.current_power_kw / 1000).toFixed(2)} unit="MW" secondary="Total active power" />
-          <KPI label="FLEET EXPECTED" value={(summary.expected_power_kw / 1000).toFixed(2)} unit="MW" secondary="Based on conditions" />
-          <KPI label="AVAILABILITY" value={summary.availability_pct.toFixed(1)} unit="%" secondary="Fleet wide" accent={summary.availability_pct > 95 ? 'healthy' : 'warning'} />
+          <KPI label="FARM POWER" value={(summary.current_power_kw / 1000).toFixed(2)} unit="MW" secondary="Total active power" />
+          <KPI label="FARM EXPECTED" value={(summary.expected_power_kw / 1000).toFixed(2)} unit="MW" secondary="Based on conditions" />
+          <KPI label="AVAILABILITY" value={summary.availability_pct.toFixed(1)} unit="%" secondary="Farm wide" accent={summary.availability_pct > 95 ? 'healthy' : 'warning'} />
           <KPI label="LOSS ESTIMATE" value={((summary.expected_power_kw - summary.current_power_kw) * 24 / 1000).toFixed(2)} unit="MWh" secondary="24h projection" accent="degraded" />
         </div>
 
         <div className={styles.grid}>
           <Card className={styles.chartPlaceholder}>
-            <h3 className="text-section-heading">Fleet Health Distribution</h3>
+            <h3 className="text-section-heading">Farm Health Distribution</h3>
             <p className="text-muted text-tiny mt-1 mb-2">Breakdown of operational health status across {fleet.length} assets</p>
             <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
               <Doughnut data={doughnutData} options={doughnutOptions} />
@@ -242,7 +242,7 @@ export function Analytics() {
 
           <Card className={styles.chartPlaceholder}>
             <h3 className="text-section-heading">Component Risk Distribution</h3>
-            <p className="text-muted text-tiny mt-1 mb-2">Fleet-wide average risk percentages by subsystem</p>
+            <p className="text-muted text-tiny mt-1 mb-2">Farm-wide average risk percentages by subsystem</p>
             <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
               <Radar data={radarData} options={radarOptions} />
             </div>
@@ -251,12 +251,12 @@ export function Analytics() {
           <Card className={styles.heatmapCard}>
             <div className={styles.heatmapHeader} style={{ padding: '20px 24px 0', borderBottom: 'none' }}>
               <div>
-                <h3 className="text-section-heading">Fleet Generation Trend (24h)</h3>
+                <h3 className="text-section-heading">Farm Generation Trend (24h)</h3>
                 <p className="text-muted text-tiny mt-1">Actual vs Expected Generation MWh</p>
               </div>
             </div>
             <div style={{ height: '260px', width: '100%', padding: '0 24px 24px' }}>
-              <Line data={fleetTrendData} options={{...chartOptions, animation: { duration: 500 }}} />
+              <Line data={fleetTrendData} options={{ ...chartOptions, animation: { duration: 500 } }} />
             </div>
           </Card>
 
@@ -264,7 +264,7 @@ export function Analytics() {
           <Card className={styles.heatmapCard}>
             <div className={styles.heatmapHeader}>
               <div>
-                <h3 className="text-section-heading">Fleet Risk & Anomaly Heatmap Matrix</h3>
+                <h3 className="text-section-heading">Farm Risk & Anomaly Heatmap Matrix</h3>
                 <p className="text-muted text-tiny mt-1">Single-screen control-center view: 30 Turbines (T01 → T30) × 6 Component Subsystems</p>
               </div>
               <div className={styles.heatmapLegend}>
@@ -309,7 +309,7 @@ export function Analytics() {
 
                     return (
                       <tr key={t.id}>
-                        <td 
+                        <td
                           className={styles.turbineCell}
                           onClick={() => {
                             setSelectedId(t.id);
@@ -323,7 +323,7 @@ export function Analytics() {
                           const tileClass = r > 60 ? styles.riskCritical : r > 30 ? styles.riskWarning : styles.riskNormal;
                           return (
                             <td key={c.key}>
-                              <div 
+                              <div
                                 className={`${styles.riskTile} ${tileClass}`}
                                 title={`${t.id} ${c.name}: ${r}% Failure Risk`}
                                 onClick={() => {
@@ -455,7 +455,7 @@ export function Analytics() {
           display: true,
           position: 'right' as const,
           title: { display: true, text: 'Temperature (°C)', color: c_healthy },
-          grid: { drawOnChartArea: false }, 
+          grid: { drawOnChartArea: false },
         },
       }
     };
@@ -465,7 +465,7 @@ export function Analytics() {
         <div className={styles.kpiStrip}>
           <KPI label="ACTUAL POWER" value={(turbine.telemetry.power_kw / 1000).toFixed(2)} unit="MW" />
           <KPI label="EXPECTED POWER" value={(turbine.telemetry.expected_power_kw / 1000).toFixed(2)} unit="MW" />
-          <KPI label="YAW ERROR" value={turbine.features.yaw_error_deg.toFixed(1)} unit="°" accent={turbine.features.yaw_error_deg > 5 ? 'degraded' : 'healthy'}/>
+          <KPI label="YAW ERROR" value={turbine.features.yaw_error_deg.toFixed(1)} unit="°" accent={turbine.features.yaw_error_deg > 5 ? 'degraded' : 'healthy'} />
           <KPI label="DAILY LOSS" value={((turbine.telemetry.expected_power_kw - turbine.telemetry.power_kw) * 24 / 1000).toFixed(2)} unit="MWh" accent="degraded" />
         </div>
 
@@ -492,13 +492,9 @@ export function Analytics() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div>
-          <h1 className="text-page-title">Analytics</h1>
-          <p className="text-muted">Analyze fleet performance and component trends</p>
-        </div>
-        <div className={styles.controls}>
+        <div className={styles.controls} style={{ flex: 1, justifyContent: 'flex-start' }}>
           <div className={styles.tabs}>
-            <button className={view === 'FLEET' ? styles.activeTab : styles.tab} onClick={() => setView('FLEET')}>Fleet Analytics</button>
+            <button className={view === 'FLEET' ? styles.activeTab : styles.tab} onClick={() => setView('FLEET')}>Farm Analytics</button>
             <button className={view === 'INDIVIDUAL' ? styles.activeTab : styles.tab} onClick={() => setView('INDIVIDUAL')}>Individual Analytics</button>
           </div>
           {view === 'INDIVIDUAL' && (

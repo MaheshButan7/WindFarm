@@ -41,12 +41,7 @@ export function Turbines() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div>
-          <h1 className="text-page-title">Turbines</h1>
-          <p className="text-muted">{fleet.length} Assets · {onlineCount} Online · {criticalCount} Critical</p>
-        </div>
-        
-        <div className={styles.controls}>
+        <div className={styles.controls} style={{ flex: 1, justifyContent: 'flex-start' }}>
           <div className={styles.searchBox}>
             <Search size={16} className={styles.searchIcon} />
             <input 

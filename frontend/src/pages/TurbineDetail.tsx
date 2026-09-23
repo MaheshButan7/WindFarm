@@ -34,22 +34,18 @@ export function TurbineDetail() {
     }
   };
 
-  const orbClass = t.status === 'CRITICAL' || f.health_score < 40 
-    ? styles.orbCritical 
-    : t.status === 'DEGRADED' || f.health_score < 60 
-    ? styles.orbDegraded 
-    : t.status === 'WARNING' || f.health_score < 80 
-    ? styles.orbWarning 
-    : styles.orbNormal;
+  const orbClass = t.status === 'CRITICAL' || f.health_score < 40
+    ? styles.orbCritical
+    : t.status === 'DEGRADED' || f.health_score < 60
+      ? styles.orbDegraded
+      : t.status === 'WARNING' || f.health_score < 80
+        ? styles.orbWarning
+        : styles.orbNormal;
 
   return (
     <div className={styles.container}>
       <div className={styles.hero}>
-        <div>
-          <span className="text-tiny">TURBINE DEEP ANALYSIS</span>
-          <h1 className="text-page-title">{t.id} <Pill variant={t.status.toLowerCase()}>{t.status}</Pill></h1>
-          <p className="text-muted">{t.farm_id} · {t.model} · synthetic operating context</p>
-        </div>
+        <div></div>
         <div className={styles.scenarioInjector}>
           <select value={scenario} onChange={e => setScenario(e.target.value)} className={styles.select}>
             {['gearbox_degradation', 'generator_overheating', 'bearing_degradation', 'yaw_misalignment', 'pitch_imbalance', 'grid_event', 'sensor_drift', 'performance_degradation'].map(x => (
@@ -82,7 +78,7 @@ export function TurbineDetail() {
           <Card className={styles.componentsCard}>
             <h3 className="text-section-heading">Component Health</h3>
             <p className="text-tiny text-muted mb-4">Explainable Condition</p>
-            
+
             <div className={styles.componentList}>
               {cmp.map(c => {
                 const risk = f[`${c}_risk`];

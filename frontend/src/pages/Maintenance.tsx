@@ -19,10 +19,7 @@ export function Maintenance() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className="text-page-title">Predictive Maintenance</h1>
-        <p className="text-muted">Prioritized by risk, production impact and health</p>
-      </div>
+
 
       <div className={styles.priorityGrid}>
         {rows.map((x, i) => (

@@ -107,7 +107,7 @@
 .userBubble {
   align-self: flex-end;
   background: var(--brand-primary);
-  color: white;
+  color: #0F172A;
   padding: 12px 16px;
   border-radius: 16px 16px 0 16px;
   max-width: 80%;

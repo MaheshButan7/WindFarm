@@ -21,7 +21,7 @@ export function Header() {
     const saved = localStorage.getItem('theme') || 'light';
     setTheme(saved as 'light' | 'dark');
     document.documentElement.setAttribute('data-theme', saved);
-    return () => unsub();
+    return () => { unsub(); };
   }, []);
 
   const toggleTheme = () => {

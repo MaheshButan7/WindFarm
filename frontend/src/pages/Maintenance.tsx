@@ -19,7 +19,7 @@ export function Maintenance() {
     };
     update(); // initial load
     const unsubscribe = globalSimulator.subscribe(update);
-    return () => unsubscribe();
+    return () => { unsubscribe(); };
   }, []);
 
   const columns = [

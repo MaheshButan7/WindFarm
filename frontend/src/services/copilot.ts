@@ -59,18 +59,18 @@ export async function queryCopilot(question: string) {
       }
     }
   } else if (q.includes('attention first') || q.includes('worst')) {
-    const queue = globalSimulator.getMaintenanceQueue();
+    const queue = globalSimulator.getWorkOrders();
     if (queue.length > 0) {
       const top = queue[0];
       const t = globalSimulator.getTurbine(top.turbine_id);
       if (t) {
         result = {
           finding: `${t.id} requires immediate attention due to ${top.component} risk.`,
-          evidence: [`Overall failure risk is ${Math.round(top.risk)}%`],
+          evidence: [`Overall failure risk is ${Math.round(t.features.overall_failure_risk)}%`],
           impact: `Could lead to complete ${top.component} failure and prolonged downtime.`,
           risk: `Critical risk detected in ${top.component}.`,
           historical: 'Similar patterns preceded major failures last quarter.',
-          recommendation: top.recommended_action,
+          recommendation: top.title,
           confidence: 91
         };
       }

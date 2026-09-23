@@ -133,7 +133,7 @@ export function FloatingCopilot() {
               onKeyDown={e => e.key === 'Enter' && ask()}
               placeholder="Ask anything..."
             />
-            <Button onClick={ask} disabled={loading || !query.trim()} variant="primary">
+            <Button onClick={() => ask()} disabled={loading || !query.trim()} variant="primary">
               <Send size={16} />
             </Button>
           </div>

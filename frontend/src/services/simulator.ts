@@ -655,7 +655,7 @@ export class Simulator {
       if (status === 'RESOLVED' || status === 'DISMISSED') {
         this.operationalAlarms.forEach(op => {
           if (op.parentIncidentId === id) {
-            op.state = 'Cleared';
+            op.state = 'Resolved';
           }
         });
       }

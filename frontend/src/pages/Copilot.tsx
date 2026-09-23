@@ -16,7 +16,7 @@ export function Copilot() {
     };
     update();
     const unsub = globalSimulator.subscribe(update);
-    return () => unsub();
+    return () => { unsub(); };
   }, []);
 
 

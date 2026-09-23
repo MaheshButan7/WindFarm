@@ -526,6 +526,14 @@ export class Simulator {
     const turbine = this.getTurbine(turbine_id);
     const baseTemp = turbine ? turbine.telemetry.gearbox_temperature_c : 65;
     const baseVib = turbine ? turbine.telemetry.vibration_rms_mm_s : 1.2;
+    const baseRisks = turbine ? [
+      turbine.features.gearbox_risk,
+      turbine.features.generator_risk,
+      turbine.features.bearing_risk,
+      turbine.features.yaw_risk,
+      turbine.features.pitch_risk,
+      turbine.features.electrical_risk,
+    ] : [5, 5, 5, 5, 5, 5];
 
     for (let i = hours; i >= 0; i--) {
       const ts = new Date(now - i * 3600000);
@@ -538,6 +546,12 @@ export class Simulator {
         vibration_rms_mm_s: Math.max(0.5, baseVib + hourSin * 0.4 + noise(0.2)),
         gearbox_temperature_c: Math.max(40, baseTemp + hourSin * 3 + noise(1.5)),
         wind_speed_mps: Math.max(3, 8.0 + hourSin * 2 + noise(1)),
+        gearbox_risk: Math.max(0, Math.min(100, baseRisks[0] + hourSin * 4 + noise(2))),
+        generator_risk: Math.max(0, Math.min(100, baseRisks[1] + hourSin * 3 + noise(1.5))),
+        bearing_risk: Math.max(0, Math.min(100, baseRisks[2] + hourSin * 3 + noise(1.5))),
+        yaw_risk: Math.max(0, Math.min(100, baseRisks[3] + hourSin * 4 + noise(2))),
+        pitch_risk: Math.max(0, Math.min(100, baseRisks[4] + hourSin * 3 + noise(1.5))),
+        electrical_risk: Math.max(0, Math.min(100, baseRisks[5] + hourSin * 2 + noise(1))),
       });
     }
     return history;

@@ -62,38 +62,6 @@
   letter-spacing: 0.05em;
 }
 
-.scenarioInjector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--surface);
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-}
-
-.select {
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-.btnInject {
-  background: var(--brand-primary);
-  color: white;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.btnInject:hover {
-  background: var(--brand-secondary);
-}
-
 .kpiStrip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

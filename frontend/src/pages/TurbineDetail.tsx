@@ -10,7 +10,6 @@ import { globalSimulator } from '../services/simulator';
 export function TurbineDetail() {
   const { id } = useParams();
   const [t, setT] = useState<any>(null);
-  const [scenario, setScenario] = useState('gearbox_degradation');
 
   useEffect(() => {
     const update = () => {
@@ -28,12 +27,6 @@ export function TurbineDetail() {
   const f = t.features;
   const cmp = ['gearbox', 'generator', 'bearing', 'yaw', 'pitch', 'electrical'];
 
-  const injectScenario = () => {
-    if (id) {
-      globalSimulator.injectScenario(id, scenario);
-    }
-  };
-
   const orbClass = t.status === 'CRITICAL' || f.health_score < 40
     ? styles.orbCritical
     : t.status === 'DEGRADED' || f.health_score < 60
@@ -46,14 +39,6 @@ export function TurbineDetail() {
     <div className={styles.container}>
       <div className={styles.hero}>
         <div></div>
-        <div className={styles.scenarioInjector}>
-          <select value={scenario} onChange={e => setScenario(e.target.value)} className={styles.select}>
-            {['gearbox_degradation', 'generator_overheating', 'bearing_degradation', 'yaw_misalignment', 'pitch_imbalance', 'grid_event', 'sensor_drift', 'performance_degradation'].map(x => (
-              <option key={x} value={x}>{x.replace('_', ' ')}</option>
-            ))}
-          </select>
-          <button onClick={injectScenario} className={styles.btnInject}>Inject Scenario</button>
-        </div>
         <div className={`${styles.orb} ${orbClass}`}>
           <strong style={{ color: t.status === 'CRITICAL' || f.health_score < 40 ? 'var(--status-critical)' : undefined }}>
             {Math.round(f.health_score)}

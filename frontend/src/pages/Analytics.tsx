@@ -43,11 +43,36 @@ const getComputedVar = (varName: string) => {
 
 export function Analytics() {
   const [view, setView] = useState<'FLEET' | 'INDIVIDUAL'>('FLEET');
+  const [selectedFarm, setSelectedFarm] = useState('Overall');
   const [selectedId, setSelectedId] = useState('T04');
   const [turbine, setTurbine] = useState<TurbineData | undefined>(undefined);
   const [fleet, setFleet] = useState<TurbineData[]>(globalSimulator.getFleet());
-  const [summary, setSummary] = useState(globalSimulator.getSummary());
   const [themeTick, setThemeTick] = useState(0);
+
+  const analyticsFleet = useMemo(
+    () => selectedFarm === 'Overall' ? fleet : fleet.filter(t => t.farm_id === selectedFarm),
+    [fleet, selectedFarm]
+  );
+
+  const analyticsSummary = useMemo(() => {
+    const online = analyticsFleet.filter(t => t.status !== 'OFFLINE').length;
+    const currentPower = analyticsFleet.reduce((sum, t) => sum + t.telemetry.power_kw, 0);
+    const expectedPower = analyticsFleet.reduce((sum, t) => sum + t.telemetry.expected_power_kw, 0);
+    const health = analyticsFleet.reduce((sum, t) => sum + t.features.health_score, 0);
+    const turbineIds = new Set(analyticsFleet.map(t => t.id));
+    const activeAlerts = globalSimulator.getIncidents().filter(i => turbineIds.has(i.turbineId) && i.status === 'OPEN').length;
+
+    return {
+      turbines: analyticsFleet.length,
+      online,
+      critical: analyticsFleet.filter(t => t.status === 'CRITICAL').length,
+      current_power_kw: currentPower,
+      expected_power_kw: expectedPower,
+      availability_pct: analyticsFleet.length ? (online / analyticsFleet.length) * 100 : 0,
+      fleet_health: analyticsFleet.length ? health / analyticsFleet.length : 0,
+      active_alerts: activeAlerts,
+    };
+  }, [analyticsFleet]);
 
   // Re-render charts when dark mode changes
   useEffect(() => {
@@ -62,7 +87,6 @@ export function Analytics() {
     const update = () => {
       setFleet([...globalSimulator.getFleet()]);
       setTurbine(globalSimulator.getTurbine(selectedId));
-      setSummary(globalSimulator.getSummary());
     };
     update();
     const unsubscribe = globalSimulator.subscribe(update);
@@ -80,9 +104,19 @@ export function Analytics() {
       maintainAspectRatio: false,
       color: textColor,
       animation: { duration: 0 }, // Disable animation for real-time updates
+      interaction: { mode: 'index' as const, intersect: false },
+      elements: {
+        line: { borderWidth: 2 },
+      },
       plugins: {
         legend: {
-          labels: { color: textColor }
+          labels: {
+            color: textColor,
+            usePointStyle: true,
+            boxWidth: 8,
+            padding: 16,
+            font: { size: 12 },
+          }
         },
         tooltip: {
           backgroundColor: tooltipBg,
@@ -90,16 +124,21 @@ export function Analytics() {
           bodyColor: textColor,
           borderColor: gridColor,
           borderWidth: 1,
+          cornerRadius: 6,
+          padding: 10,
+          boxPadding: 4,
         }
       },
       scales: {
         x: {
-          grid: { color: gridColor },
-          ticks: { color: textColor }
+          grid: { display: false },
+          border: { display: false },
+          ticks: { color: textColor, maxTicksLimit: 8, maxRotation: 0 }
         },
         y: {
           grid: { color: gridColor },
-          ticks: { color: textColor }
+          border: { display: false },
+          ticks: { color: textColor, padding: 8 }
         }
       }
     };
@@ -108,18 +147,27 @@ export function Analytics() {
   // Fleet distribution metrics
   const healthDist = useMemo(() => {
     const counts = { healthy: 0, warning: 0, degraded: 0, critical: 0 };
-    fleet.forEach(t => {
+    analyticsFleet.forEach(t => {
       if (t.status === 'NORMAL') counts.healthy++;
       else if (t.status === 'WARNING') counts.warning++;
       else if (t.status === 'DEGRADED') counts.degraded++;
       else if (t.status === 'CRITICAL') counts.critical++;
     });
     return counts;
-  }, [fleet]);
+  }, [analyticsFleet]);
 
   const componentRisks = useMemo(() => {
-    return globalSimulator.getFleetComponentRisks();
-  }, [fleet]);
+    if (!analyticsFleet.length) return { gearbox: 0, generator: 0, bearing: 0, yaw: 0, pitch: 0, electrical: 0 };
+    const total = analyticsFleet.reduce((risks, t) => ({
+      gearbox: risks.gearbox + t.features.gearbox_risk,
+      generator: risks.generator + t.features.generator_risk,
+      bearing: risks.bearing + t.features.bearing_risk,
+      yaw: risks.yaw + t.features.yaw_risk,
+      pitch: risks.pitch + t.features.pitch_risk,
+      electrical: risks.electrical + t.features.electrical_risk,
+    }), { gearbox: 0, generator: 0, bearing: 0, yaw: 0, pitch: 0, electrical: 0 });
+    return Object.fromEntries(Object.entries(total).map(([key, value]) => [key, value / analyticsFleet.length])) as typeof total;
+  }, [analyticsFleet]);
 
   // 24h history for selected turbine
   const history24h = useMemo(() => {
@@ -127,8 +175,13 @@ export function Analytics() {
   }, [selectedId, turbine]);
 
   const fleetHistory24h = useMemo(() => {
-    return globalSimulator.getFleetHistory(24);
-  }, [fleet]);
+    const scale = analyticsFleet.length / Math.max(fleet.length, 1);
+    return globalSimulator.getFleetHistory(24).map(point => ({
+      ...point,
+      actualMWh: point.actualMWh * scale,
+      expectedMWh: point.expectedMWh * scale,
+    }));
+  }, [analyticsFleet.length, fleet.length]);
 
   const renderFleetView = () => {
     const c_healthy = getComputedVar('--status-healthy') || '#10B981';
@@ -214,9 +267,16 @@ export function Analytics() {
       animation: { duration: 500 },
       layout: { padding: 20 },
       plugins: {
+        ...chartOptions.plugins,
         legend: {
           position: 'right' as const,
-          labels: { color: getComputedVar('--text-primary'), padding: 20, font: { size: 13 } }
+          labels: {
+            color: getComputedVar('--text-primary'),
+            usePointStyle: true,
+            boxWidth: 8,
+            padding: 16,
+            font: { size: 12 },
+          }
         }
       },
       cutout: '75%'
@@ -225,16 +285,16 @@ export function Analytics() {
     return (
       <>
         <div className={styles.kpiStrip}>
-          <KPI label="FARM POWER" value={(summary.current_power_kw / 1000).toFixed(2)} unit="MW" secondary="Total active power" />
-          <KPI label="FARM EXPECTED" value={(summary.expected_power_kw / 1000).toFixed(2)} unit="MW" secondary="Based on conditions" />
-          <KPI label="AVAILABILITY" value={summary.availability_pct.toFixed(1)} unit="%" secondary="Farm wide" accent={summary.availability_pct > 95 ? 'healthy' : 'warning'} />
-          <KPI label="LOSS ESTIMATE" value={((summary.expected_power_kw - summary.current_power_kw) * 24 / 1000).toFixed(2)} unit="MWh" secondary="24h projection" accent="degraded" />
+          <KPI label="FARM POWER" value={(analyticsSummary.current_power_kw / 1000).toFixed(2)} unit="MW" secondary={`${analyticsSummary.turbines} turbines`} />
+          <KPI label="FARM EXPECTED" value={(analyticsSummary.expected_power_kw / 1000).toFixed(2)} unit="MW" secondary={selectedFarm} />
+          <KPI label="AVAILABILITY" value={analyticsSummary.availability_pct.toFixed(1)} unit="%" secondary={`${analyticsSummary.online} online`} accent={analyticsSummary.availability_pct > 95 ? 'healthy' : 'warning'} />
+          <KPI label="LOSS ESTIMATE" value={((analyticsSummary.expected_power_kw - analyticsSummary.current_power_kw) * 24 / 1000).toFixed(2)} unit="MWh" secondary="24h projection" accent="degraded" />
         </div>
 
         <div className={styles.grid}>
           <Card className={styles.chartPlaceholder}>
             <h3 className="text-section-heading">Farm Health Distribution</h3>
-            <p className="text-muted text-tiny mt-1 mb-2">Breakdown of operational health status across {fleet.length} assets</p>
+            <p className="text-muted text-tiny mt-1 mb-2">{selectedFarm} health distribution across {analyticsFleet.length} turbines</p>
             <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
               <Doughnut data={doughnutData} options={doughnutOptions} />
             </div>
@@ -242,7 +302,7 @@ export function Analytics() {
 
           <Card className={styles.chartPlaceholder}>
             <h3 className="text-section-heading">Component Risk Distribution</h3>
-            <p className="text-muted text-tiny mt-1 mb-2">Farm-wide average risk percentages by subsystem</p>
+            <p className="text-muted text-tiny mt-1 mb-2">{selectedFarm} average risk percentages by subsystem</p>
             <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
               <Radar data={radarData} options={radarOptions} />
             </div>
@@ -265,7 +325,7 @@ export function Analytics() {
             <div className={styles.heatmapHeader}>
               <div>
                 <h3 className="text-section-heading">Farm Risk & Anomaly Heatmap Matrix</h3>
-                <p className="text-muted text-tiny mt-1">Single-screen control-center view: 30 Turbines (T01 → T30) × 6 Component Subsystems</p>
+                <p className="text-muted text-tiny mt-1">{selectedFarm} risk across {analyticsFleet.length} turbines and six component subsystems</p>
               </div>
               <div className={styles.heatmapLegend}>
                 <div className={styles.legendItem}>
@@ -297,7 +357,7 @@ export function Analytics() {
                   </tr>
                 </thead>
                 <tbody>
-                  {fleet.map((t) => {
+                  {analyticsFleet.map((t) => {
                     const components = [
                       { key: 'gearbox', name: 'Gearbox', risk: t.features.gearbox_risk },
                       { key: 'generator', name: 'Generator', risk: t.scenario === 'generator_overheating' ? 88 : (t.features.gearbox_risk > 50 ? 45 : 5) },
@@ -353,8 +413,12 @@ export function Analytics() {
 
     const c_healthy = getComputedVar('--status-healthy') || '#10B981';
     const c_warning = getComputedVar('--status-warning') || '#F59E0B';
+    const c_critical = getComputedVar('--status-critical') || '#EF4444';
     const c_muted = getComputedVar('--text-muted') || '#64748B';
     const c_brand = getComputedVar('--brand-primary') || '#EAB308';
+
+    // Keep synthetic history in chronological order for the trend charts.
+    const turbineHistory = [...(history24h || [])];
 
     // Scatter Data for Power Curve
     const scatterCurvePoints = [];
@@ -378,6 +442,15 @@ export function Analytics() {
           fill: false,
           pointRadius: 0,
           tension: 0.4
+        },
+        {
+          label: 'Recent Operating Points',
+          data: turbineHistory.map(h => ({ x: h.wind_speed_mps, y: h.power_kw / 1000 })),
+          backgroundColor: `${c_healthy}99`,
+          borderColor: c_healthy,
+          showLine: false,
+          pointRadius: 3,
+          pointHoverRadius: 5,
         },
         {
           label: 'Live Operating Point',
@@ -411,8 +484,59 @@ export function Analytics() {
       }
     };
 
+    const powerHistoryData = {
+      labels: turbineHistory.map(h => h.timeLabel),
+      datasets: [
+        {
+          label: 'Actual Power (kW)',
+          data: turbineHistory.map(h => h.power_kw),
+          borderColor: c_brand,
+          backgroundColor: `${c_brand}20`,
+          fill: true,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHitRadius: 10,
+        },
+        {
+          label: 'Expected Power (kW)',
+          data: turbineHistory.map(h => h.expected_power_kw),
+          borderColor: c_muted,
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHitRadius: 10,
+        },
+      ],
+    };
+
+    const componentRiskData = {
+      labels: turbineHistory.map(h => h.timeLabel),
+      datasets: [
+        { label: 'Gearbox', data: turbineHistory.map(h => h.gearbox_risk), borderColor: c_warning, tension: 0.35, pointRadius: 0 },
+        { label: 'Generator', data: turbineHistory.map(h => h.generator_risk), borderColor: c_critical, tension: 0.35, pointRadius: 0 },
+        { label: 'Bearing', data: turbineHistory.map(h => h.bearing_risk), borderColor: c_healthy, tension: 0.35, pointRadius: 0 },
+        { label: 'Yaw', data: turbineHistory.map(h => h.yaw_risk), borderColor: c_brand, tension: 0.35, pointRadius: 0 },
+        { label: 'Pitch', data: turbineHistory.map(h => h.pitch_risk), borderColor: c_muted, tension: 0.35, pointRadius: 0 },
+        { label: 'Electrical', data: turbineHistory.map(h => h.electrical_risk), borderColor: '#8B5CF6', tension: 0.35, pointRadius: 0 },
+      ],
+    };
+
+    const riskTrendOptions = {
+      ...chartOptions,
+      scales: {
+        ...chartOptions.scales,
+        y: {
+          ...chartOptions.scales?.y,
+          min: 0,
+          max: 100,
+          title: { display: true, text: 'Risk (%)', color: getComputedVar('--text-secondary') },
+        },
+      },
+    };
+
     // Mechanical Trends Line Data
-    const revHistory = [...(history24h || [])].reverse();
+    const revHistory = turbineHistory;
     const trendData = {
       labels: revHistory.map(h => h.timeLabel),
       datasets: [
@@ -472,9 +596,25 @@ export function Analytics() {
         <div className={styles.grid}>
           <Card className={styles.chartPlaceholder}>
             <h3 className="text-section-heading">Power Curve Profile ({turbine.id})</h3>
-            <p className="text-muted text-body mt-1 mb-2">Theoretical power curve vs live operating point</p>
+            <p className="text-muted text-body mt-1 mb-2">Theoretical curve, recent operating points, and current output</p>
             <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
               <Scatter data={powerCurveData} options={powerCurveOptions} />
+            </div>
+          </Card>
+
+          <Card className={styles.chartPlaceholder}>
+            <h3 className="text-section-heading">Power vs Expected (24h)</h3>
+            <p className="text-muted text-tiny mt-1 mb-2">Actual generation compared with the synthetic expected output</p>
+            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
+              <Line data={powerHistoryData} options={chartOptions} />
+            </div>
+          </Card>
+
+          <Card className={styles.chartPlaceholder}>
+            <h3 className="text-section-heading">Component Risk Trend (24h)</h3>
+            <p className="text-muted text-tiny mt-1 mb-2">Synthetic risk estimates by subsystem, on a 0–100% scale</p>
+            <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
+              <Line data={componentRiskData} options={riskTrendOptions} />
             </div>
           </Card>
 
@@ -497,12 +637,27 @@ export function Analytics() {
             <button className={view === 'FLEET' ? styles.activeTab : styles.tab} onClick={() => setView('FLEET')}>Farm Analytics</button>
             <button className={view === 'INDIVIDUAL' ? styles.activeTab : styles.tab} onClick={() => setView('INDIVIDUAL')}>Individual Analytics</button>
           </div>
+          <select
+            aria-label="Select farm"
+            value={selectedFarm}
+            onChange={e => {
+              const farm = e.target.value;
+              setSelectedFarm(farm);
+              if (farm !== 'Overall') {
+                const firstTurbine = fleet.find(t => t.farm_id === farm);
+                if (firstTurbine) setSelectedId(firstTurbine.id);
+              }
+            }}
+            className={styles.select}
+          >
+            <option value="Overall">Overall</option>
+            <option value="Farm A">Farm A</option>
+            <option value="Farm B">Farm B</option>
+            <option value="Farm C">Farm C</option>
+          </select>
           {view === 'INDIVIDUAL' && (
             <select value={selectedId} onChange={e => setSelectedId(e.target.value)} className={styles.select}>
-              {Array.from({ length: 30 }, (_, i) => {
-                const id = `T${(i + 1).toString().padStart(2, '0')}`;
-                return <option key={id} value={id}>{id}</option>;
-              })}
+              {analyticsFleet.map(t => <option key={t.id} value={t.id}>{t.id}</option>)}
             </select>
           )}
         </div>

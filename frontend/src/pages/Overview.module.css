@@ -4,6 +4,16 @@
   gap: 24px;
 }
 
+.farmFilterBar {
+  display: flex;
+  align-items: center;
+}
+
+.farmFilterSelect {
+  min-width: 150px;
+  height: 40px;
+}
+
 .loading {
   display: flex;
   align-items: center;
@@ -14,8 +24,13 @@
 
 .kpiStrip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 16px;
+}
+
+.kpiStrip > * {
+  height: 100%;
+  min-height: 124px;
 }
 
 .performanceSection {
@@ -81,12 +96,39 @@
 
 .twoColumnMapAlerts, .twoColumnEnvHealth {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 1400px) {
+  .kpiStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1024px) {
   .twoColumnMapAlerts, .twoColumnEnvHealth {
+    grid-template-columns: 1fr;
+  }
+
+  .recentAlertsCard {
+    min-height: 0;
+  }
+
+  .gisMapContainer {
+    min-height: 340px;
+  }
+}
+
+@media (max-width: 700px) {
+  .kpiStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 440px) {
+  .kpiStrip {
     grid-template-columns: 1fr;
   }
 }
@@ -101,6 +143,10 @@
   flex: 1;
   min-height: 400px;
   position: relative;
+}
+
+.mapHeader {
+  padding: 20px 24px 12px;
 }
 
 /* React-Leaflet global overrides */
@@ -133,7 +179,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: 460px;
+  min-height: 450px;
   overflow-y: auto;
 }
 

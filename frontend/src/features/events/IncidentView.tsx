@@ -184,7 +184,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
             <div className={styles.detailSection}>
               <h3>Why This Event?</h3>
               <div style={{ padding: '0 8px' }}>
-                <ul style={{ paddingLeft: '20px', margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.6' }}>
+                <ul style={{ paddingLeft: '20px', margin: '0 0 16px 0', fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>
                   {selected.whyThisEvent.map((reason, idx) => (
                     <li key={idx}>{reason}</li>
                   ))}
@@ -202,20 +202,20 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
                   const basePct = (e.baselineValue / maxVal) * 100;
                   return (
                     <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                         <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{e.parameter}</span>
                         <span style={{ fontWeight: 600, color: e.trend === 'up' ? 'var(--status-critical)' : 'var(--status-warning)' }}>
                           {e.trend === 'up' ? '↑' : '↓'} {Math.abs(e.deviationPct)}%
                         </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
                         <div style={{ width: '60px' }}>Current</div>
                         <div style={{ flex: 1, height: '8px', background: 'var(--bg-secondary)', borderRadius: '4px', overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${curPct}%`, background: 'var(--text-primary)' }} />
                         </div>
                         <div style={{ width: '60px', textAlign: 'right', fontWeight: 500 }}>{e.currentValue} {e.unit}</div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>
                         <div style={{ width: '60px' }}>Baseline</div>
                         <div style={{ flex: 1, height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${basePct}%`, background: 'var(--text-muted)' }} />
@@ -233,7 +233,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
               <h3>Contributing Signals</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 8px' }}>
                 {selected.contributingSignals.map((sig, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px' }}>
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
                     <div style={{ width: '130px', color: 'var(--text-secondary)' }}>{sig.name}</div>
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <div style={{ height: '6px', width: `${sig.score}%`, background: sig.contribution === 'High' ? 'var(--status-critical)' : sig.contribution === 'Medium' ? 'var(--status-warning)' : 'var(--status-info)', borderRadius: '3px' }} />
@@ -253,7 +253,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
                     key={rawName} 
                     style={{ 
                       color: 'var(--text-primary)', 
-                      fontSize: '13px', 
+                      fontSize: '14px', 
                       background: 'var(--bg-primary)', 
                       padding: '8px 12px', 
                       borderRadius: '6px', 
@@ -290,16 +290,16 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
                 <h3>Impact <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'normal', textTransform: 'none', marginLeft: '8px' }}>(Estimated)</span></h3>
                 <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Lost Power</span>
-                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{Math.round(selected.impact.currentLostPowerKw)} kW</span>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Lost Power</span>
+                    <span style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text-primary)' }}>{Math.round(selected.impact.currentLostPowerKw)} kW</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Estimated Daily Loss</span>
-                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{selected.impact.estimatedDailyLossMwh.toFixed(1)} MWh</span>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Estimated Daily Loss</span>
+                    <span style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text-primary)' }}>{selected.impact.estimatedDailyLossMwh.toFixed(1)} MWh</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Performance Deviation</span>
-                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--status-warning)' }}>{selected.impact.performanceDeviationPct.toFixed(1)}%</span>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Performance Deviation</span>
+                    <span style={{ fontSize: '17px', fontWeight: 600, color: 'var(--status-warning)' }}>{selected.impact.performanceDeviationPct.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
@@ -319,7 +319,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
               <div className={styles.detailSection}>
                 <h3>Recommended Checks</h3>
                 <div style={{ padding: '0 8px' }}>
-                  <ul style={{ listStyleType: 'none', padding: 0, margin: '0 0 12px 0', fontSize: '13px', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <ul style={{ listStyleType: 'none', padding: 0, margin: '0 0 12px 0', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {selected.recommendedChecks.map((check, idx) => (
                       <li key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <input type="checkbox" disabled style={{ width: '16px', height: '16px' }} />
@@ -334,7 +334,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
             {/* ACTIVITY */}
             <div className={styles.detailSection}>
               <h3>Activity</h3>
-              <div style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px' }}>
+              <div style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
                 {selected.activity.map((act, idx) => (
                   <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <div style={{ color: 'var(--text-muted)' }}>{new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>

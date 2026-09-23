@@ -76,6 +76,12 @@
   flex-direction: column;
 }
 
+.chartPlaceholder > p {
+  margin-top: 6px;
+  margin-bottom: 12px;
+  line-height: 18px;
+}
+
 /* Mock Bar Chart */
 .barChart {
   flex: 1;

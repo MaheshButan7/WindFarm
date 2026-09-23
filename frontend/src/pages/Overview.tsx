@@ -44,7 +44,7 @@ ChartJS.register(
 function MapBounds({ fleet, triggerToken }: { fleet: any[], triggerToken: string }) {
   const map = useMap();
   const hasFitted = useRef<string | null>(null);
-  
+
   useEffect(() => {
     if (fleet.length > 0 && hasFitted.current !== triggerToken) {
       const lats = fleet.map(t => t.lat ?? 0);
@@ -99,12 +99,18 @@ export function Overview() {
 
   const powerDeviation = ((summary.current_power_kw / summary.expected_power_kw) - 1) * 100;
   const energyLoss = (summary.expected_power_kw - summary.current_power_kw) * 24 / 1000;
-  
+
   const avgWind = filteredFleet.reduce((acc, t) => acc + t.telemetry.wind_speed_mps, 0) / (filteredFleet.length || 1);
   const avgTemp = filteredFleet.reduce((acc, t) => acc + t.telemetry.ambient_temperature_c, 0) / (filteredFleet.length || 1);
 
   const perfPct = totalExpected24h > 0 ? ((totalActual24h / totalExpected24h) * 100).toFixed(1) : '100.0';
   const lossMWh = Math.max(0, totalExpected24h - totalActual24h).toFixed(1);
+
+  const chartBrandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim() || '#EAB308';
+  const chartMutedColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() || '#64748B';
+  const chartTextColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() || '#0F172A';
+  const chartGridColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#E2E8F0';
+  const chartTooltipColor = getComputedStyle(document.documentElement).getPropertyValue('--surface-elevated').trim() || '#FFFFFF';
 
   // ChartJS Data Setup
   const performanceChartData = {
@@ -113,24 +119,24 @@ export function Overview() {
       {
         label: 'Actual Generation (MWh)',
         data: fleetHistory.map(h => h.actualMWh),
-        borderColor: '#EAB308',
-        backgroundColor: 'rgba(234, 179, 8, 0.1)',
+        borderColor: chartBrandColor,
+        backgroundColor: `${chartBrandColor}20`,
         fill: true,
         tension: 0.4,
         pointRadius: 0,
         pointHitRadius: 10,
-        borderWidth: 3,
+        borderWidth: 2,
       },
       {
         label: 'Expected Potential (MWh)',
         data: fleetHistory.map(h => h.expectedMWh),
-        borderColor: '#94A3B8',
+        borderColor: chartMutedColor,
         borderDash: [5, 5],
         fill: false,
         tension: 0.4,
         pointRadius: 0,
         pointHitRadius: 10,
-        borderWidth: 2,
+        borderWidth: 1.5,
       },
     ],
   };
@@ -147,8 +153,13 @@ export function Overview() {
         display: false,
       },
       tooltip: {
-        backgroundColor: '#0F172A',
-        padding: 12,
+        backgroundColor: chartTooltipColor,
+        titleColor: chartTextColor,
+        bodyColor: chartTextColor,
+        borderColor: chartGridColor,
+        borderWidth: 1,
+        cornerRadius: 6,
+        padding: 10,
         titleFont: { size: 13, family: 'Inter' },
         bodyFont: { size: 13, family: 'Inter' },
       }
@@ -157,13 +168,14 @@ export function Overview() {
       y: {
         beginAtZero: true,
         grid: {
-          color: 'rgba(0,0,0,0.05)',
+          color: chartGridColor,
         },
+        ticks: { color: chartTextColor, padding: 8 },
         border: { display: false }
       },
       x: {
         grid: { display: false },
-        ticks: { maxTicksLimit: 8 },
+        ticks: { maxTicksLimit: 8, maxRotation: 0, color: chartTextColor },
         border: { display: false }
       }
     }
@@ -171,15 +183,15 @@ export function Overview() {
 
   return (
     <div className={styles.container}>
-      <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px' }}>
-        <select value={farmFilter} onChange={e => setFarmFilter(e.target.value)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', cursor: 'pointer', fontWeight: 600 }}>
+      <div className={styles.farmFilterBar}>
+        <select className={styles.farmFilterSelect} value={farmFilter} onChange={e => setFarmFilter(e.target.value)}>
           <option>All Farms</option>
           <option>Farm A</option>
           <option>Farm B</option>
           <option>Farm C</option>
         </select>
       </div>
-      
+
       {/* 1. KPI STRIP */}
       <section className={styles.kpiStrip}>
         <KPI label="TURBINES" value={String(summary.turbines)} secondary={`${summary.online} online · ${summary.critical} critical`} />
@@ -192,15 +204,15 @@ export function Overview() {
 
       {/* 2. FARM PERFORMANCE (ChartJS) */}
       <section className={styles.performanceSection}>
-        <Card padding="standard" className={styles.heroChart}>
+        <Card padding="large" className={styles.heroChart}>
           <div className={styles.sectionHeader}>
             <h2 className="text-section-heading">Real-Time Farm Performance</h2>
             <div className={styles.chartLegend}>
               <div className={styles.legendItem}>
-                <div className={styles.legendColor} style={{background: 'var(--brand-primary)'}} /> Actual Generation
+                <div className={styles.legendColor} style={{ background: 'var(--brand-primary)' }} /> Actual Generation
               </div>
               <div className={styles.legendItem}>
-                <div className={styles.legendColor} style={{background: 'var(--text-muted)', borderStyle: 'dashed'}} /> Expected Potential
+                <div className={styles.legendColor} style={{ background: 'var(--text-muted)', borderStyle: 'dashed' }} /> Expected Potential
               </div>
             </div>
           </div>
@@ -223,7 +235,7 @@ export function Overview() {
                 <strong className="text-telemetry text-status-critical">{lossMWh} MWh</strong>
               </div>
             </div>
-            
+
             <div className={styles.chartArea}>
               <Line data={performanceChartData} options={performanceChartOptions} />
             </div>
@@ -234,63 +246,63 @@ export function Overview() {
       {/* 3. GIS MAP AND ALERTS */}
       <section className={styles.twoColumnMapAlerts}>
         <Card padding="none" className={styles.mapCard}>
-           <div className={styles.alertsHeader} style={{ padding: '16px 16px 0' }}>
-             <h3 className="text-section-heading">Live GIS Map</h3>
-           </div>
-           <div className={styles.gisMapContainer}>
-             <MapContainer center={[22.5, 75.5]} zoom={6} style={{ height: '100%', width: '100%', zIndex: 1 }} zoomControl={true}>
-               <TileLayer
-                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                 className="map-tiles"
-               />
-               <MapBounds fleet={filteredFleet} triggerToken={farmFilter} />
-               {filteredFleet.map((t, i) => {
-                 const lat = t.lat ?? 0;
-                 const lon = t.lon ?? 0;
-                 
-                 return (
-                   <Marker key={t.id} position={[lat, lon]} icon={createWindmillIcon(t.status)}>
-                     <Popup>
-                       <div className={styles.tooltipHeader}>
-                         <span>{t.id}</span>
-                         <Pill variant={t.status.toLowerCase() as any}>{t.status}</Pill>
-                       </div>
-                       <div className={styles.tooltipMetrics} style={{marginTop: '8px'}}>
-                         <span>Power: {(t.telemetry.power_kw / 1000).toFixed(2)} MW</span><br/>
-                         <span>Health: {Math.round(t.features.health_score)}%</span><br/>
-                         <span>Wind: {t.telemetry.wind_speed_mps.toFixed(1)} m/s</span>
-                       </div>
-                       <div style={{marginTop: '8px'}}>
-                         <button className="text-tiny text-brand" onClick={() => navigate(`/turbines/${t.id}`)} style={{background: 'transparent', border: 'none', cursor: 'pointer', padding: 0}}>View Details</button>
-                       </div>
-                     </Popup>
-                   </Marker>
-                 );
-               })}
-             </MapContainer>
-           </div>
+          <div className={styles.mapHeader}>
+            <h3 className="text-section-heading">Live GIS Map</h3>
+          </div>
+          <div className={styles.gisMapContainer}>
+            <MapContainer center={[22.5, 75.5]} zoom={6} style={{ height: '100%', width: '100%', zIndex: 1 }} zoomControl={true}>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                className="map-tiles"
+              />
+              <MapBounds fleet={filteredFleet} triggerToken={farmFilter} />
+              {filteredFleet.map((t, i) => {
+                const lat = t.lat ?? 0;
+                const lon = t.lon ?? 0;
+
+                return (
+                  <Marker key={t.id} position={[lat, lon]} icon={createWindmillIcon(t.status)}>
+                    <Popup>
+                      <div className={styles.tooltipHeader}>
+                        <span>{t.id}</span>
+                        <Pill variant={t.status.toLowerCase() as any}>{t.status}</Pill>
+                      </div>
+                      <div className={styles.tooltipMetrics} style={{ marginTop: '8px' }}>
+                        <span>Power: {(t.telemetry.power_kw / 1000).toFixed(2)} MW</span><br />
+                        <span>Health: {Math.round(t.features.health_score)}%</span><br />
+                        <span>Wind: {t.telemetry.wind_speed_mps.toFixed(1)} m/s</span>
+                      </div>
+                      <div style={{ marginTop: '8px' }}>
+                        <button className="text-tiny text-brand" onClick={() => navigate(`/turbines/${t.id}`)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>View Details</button>
+                      </div>
+                    </Popup>
+                  </Marker>
+                );
+              })}
+            </MapContainer>
+          </div>
         </Card>
 
         <Card padding="compact" className={styles.recentAlertsCard}>
-           <div className={styles.alertsHeader}>
-             <h3 className="text-section-heading">Recent Critical Alerts</h3>
-             <button className="text-tiny text-brand" onClick={() => navigate('/alerts')} style={{background: 'transparent', border: 'none', cursor: 'pointer'}}>View All</button>
-           </div>
-           <div className={styles.alertsList}>
-             {filteredFleet.filter(t => t.scenario).slice(0, 6).map(t => (
-               <div key={t.id} className={styles.compactAlert}>
-                 <Pill variant="critical">CRITICAL</Pill>
-                 <div className={styles.compactAlertInfo}>
-                   <strong>{t.id} — {t.scenario?.replace('_', ' ')}</strong>
-                   <span className="text-tiny text-muted">Risk {Math.round(t.features.overall_failure_risk)}%</span>
-                 </div>
-               </div>
-             ))}
-             {filteredFleet.filter(t => t.scenario).length === 0 && (
-               <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>No critical alerts active.</div>
-             )}
-           </div>
+          <div className={styles.alertsHeader}>
+            <h3 className="text-section-heading">Recent Critical Alerts</h3>
+            <button className="text-tiny text-brand" onClick={() => navigate('/alerts')} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>View All</button>
+          </div>
+          <div className={styles.alertsList}>
+            {filteredFleet.filter(t => t.scenario).slice(0, 6).map(t => (
+              <div key={t.id} className={styles.compactAlert}>
+                <Pill variant="critical">CRITICAL</Pill>
+                <div className={styles.compactAlertInfo}>
+                  <strong>{t.id} — {t.scenario?.replace('_', ' ')}</strong>
+                  <span className="text-tiny text-muted">Risk {Math.round(t.features.overall_failure_risk)}%</span>
+                </div>
+              </div>
+            ))}
+            {filteredFleet.filter(t => t.scenario).length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>No critical alerts active.</div>
+            )}
+          </div>
         </Card>
       </section>
 

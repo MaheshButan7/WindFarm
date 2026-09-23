@@ -53,7 +53,7 @@
 .chartLegend {
   display: flex;
   gap: 16px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
 }
 
@@ -259,7 +259,7 @@
 }
 
 .envLabel {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -267,14 +267,14 @@
 }
 
 .envValue {
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
 }
 
 .envSubtext {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--status-healthy);
   font-weight: 500;
 }
@@ -300,22 +300,46 @@
   padding-right: 24px;
 }
 
+.healthStats {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.healthStatBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.statLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.barWrap {
+  height: 8px;
+  background-color: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
 .tooltipHeader {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--text-primary);
 }
 
 .tooltipMetrics {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-secondary);
   line-height: 1.4;
 }
 
-.text-tiny { font-size: 11px; }
 .text-muted { color: var(--text-muted); }
 .text-brand { color: var(--brand-primary); }
 .font-bold { font-weight: 700; }

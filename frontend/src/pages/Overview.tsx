@@ -63,7 +63,7 @@ function MapBounds({ fleet, triggerToken }: { fleet: any[], triggerToken: string
 const createWindmillIcon = (status: string) => {
   const color = status === 'CRITICAL' ? '#EF4444' : status === 'DEGRADED' ? '#F97316' : '#10B981';
   return L.divIcon({
-    html: `<div style="color: ${color}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 22L12 10L13 22Z" fill="currentColor"/><circle cx="12" cy="10" r="2" fill="currentColor"/><path d="M12 10 L12 2 L14 4 Z M12 10 L4 14 L6 16 Z M12 10 L20 14 L18 16 Z" fill="currentColor"/></svg></div>`,
+    html: `<div style="color: ${color}; width: 28px; height: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); display: block;"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 22L12 10L13 22Z" fill="currentColor"/><circle cx="12" cy="10" r="2" fill="currentColor"/><path d="M12 10 L12 2 L14 4 Z M12 10 L4 14 L6 16 Z M12 10 L20 14 L18 16 Z" fill="currentColor"/></svg></div>`,
     className: 'custom-windmill-icon',
     iconSize: [28, 28],
     iconAnchor: [14, 28],
@@ -72,10 +72,10 @@ const createWindmillIcon = (status: string) => {
 };
 
 export function Overview() {
-  const { fleet, summary, loading } = useLive();
+  const { fleet, summary, loading, globalFarmFilter } = useLive();
   const navigate = useNavigate();
 
-  const [farmFilter, setFarmFilter] = useState('All Farms');
+  const [mapFitTrigger, setMapFitTrigger] = useState('');
 
   // Dynamic calculations from simulator history and telemetry
   const fleetHistory = useMemo(() => globalSimulator.getFleetHistory(24) || [], [summary]);
@@ -89,19 +89,59 @@ export function Overview() {
   }, [fleetHistory]);
 
   const filteredFleet = useMemo(() => {
-    if (farmFilter === 'All Farms') return fleet;
-    return fleet.filter(t => t.farm_id === farmFilter);
-  }, [fleet, farmFilter]);
+    if (globalFarmFilter === 'All Farms') return fleet;
+    return fleet.filter(t => t.farm_id === globalFarmFilter);
+  }, [fleet, globalFarmFilter]);
 
-  if (loading || !summary) {
-    return <div className={styles.loading}>Synchronizing live fleet telemetry...</div>;
+  const filteredSummary = useMemo(() => {
+    if (globalFarmFilter === 'All Farms' && summary) return summary;
+    if (!summary) return null;
+    
+    const online = filteredFleet.filter(t => t.status !== 'OFFLINE').length;
+    const critical = filteredFleet.filter(t => t.status === 'CRITICAL').length;
+    
+    const current_power_kw = filteredFleet.reduce((acc, t) => acc + t.telemetry.power_kw, 0);
+    const expected_power_kw = filteredFleet.reduce((acc, t) => acc + t.telemetry.expected_power_kw, 0);
+    
+    const availability_pct = filteredFleet.length > 0 
+      ? (online / filteredFleet.length) * 100 
+      : 0;
+      
+    const fleet_health = filteredFleet.length > 0
+      ? filteredFleet.reduce((acc, t) => acc + t.features.health_score, 0) / filteredFleet.length
+      : 0;
+
+    return {
+      turbines: filteredFleet.length,
+      online,
+      critical,
+      current_power_kw,
+      expected_power_kw,
+      availability_pct,
+      fleet_health
+    };
+  }, [summary, filteredFleet, globalFarmFilter]);
+
+  if (loading || !summary || !filteredSummary) {
+    return <div className="empty-state"><div className="spinner" /><div>Synchronizing live fleet telemetry...</div></div>;
   }
 
-  const powerDeviation = ((summary.current_power_kw / summary.expected_power_kw) - 1) * 100;
-  const energyLoss = (summary.expected_power_kw - summary.current_power_kw) * 24 / 1000;
+  const powerDeviation = filteredSummary.expected_power_kw > 0 ? ((filteredSummary.current_power_kw / filteredSummary.expected_power_kw) - 1) * 100 : 0;
+  const energyLoss = (filteredSummary.expected_power_kw - filteredSummary.current_power_kw) * 24 / 1000;
 
   const avgWind = filteredFleet.reduce((acc, t) => acc + t.telemetry.wind_speed_mps, 0) / (filteredFleet.length || 1);
   const avgTemp = filteredFleet.reduce((acc, t) => acc + t.telemetry.ambient_temperature_c, 0) / (filteredFleet.length || 1);
+  const avgHumidity = filteredFleet.reduce((acc, t) => acc + (t.telemetry.humidity_pct || 45), 0) / (filteredFleet.length || 1);
+  const avgWindDir = filteredFleet.reduce((acc, t) => acc + (t.telemetry.wind_direction_deg || 270), 0) / (filteredFleet.length || 1);
+
+  const airDensity = 1.225 - ((avgTemp - 15) * 0.004);
+  const turbulence = 8.4 + (Math.sin(Date.now() / 5000) * 0.2);
+
+  const getCardinal = (deg: number) => {
+    const val = Math.floor((deg / 22.5) + 0.5);
+    const arr = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+    return arr[(val % 16)];
+  };
 
   const perfPct = totalExpected24h > 0 ? ((totalActual24h / totalExpected24h) * 100).toFixed(1) : '100.0';
   const lossMWh = Math.max(0, totalExpected24h - totalActual24h).toFixed(1);
@@ -183,22 +223,13 @@ export function Overview() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.farmFilterBar}>
-        <select className={styles.farmFilterSelect} value={farmFilter} onChange={e => setFarmFilter(e.target.value)}>
-          <option>All Farms</option>
-          <option>Farm A</option>
-          <option>Farm B</option>
-          <option>Farm C</option>
-        </select>
-      </div>
-
       {/* 1. KPI STRIP */}
       <section className={styles.kpiStrip}>
-        <KPI label="TURBINES" value={String(summary.turbines)} secondary={`${summary.online} online · ${summary.critical} critical`} />
-        <KPI label="ACTIVE POWER" value={(summary.current_power_kw / 1000).toFixed(1)} unit="MW" trend={powerDeviation > 0 ? 'up' : 'down'} trendValue={`${powerDeviation.toFixed(1)}% vs expected`} />
-        <KPI label="EXPECTED POWER" value={(summary.expected_power_kw / 1000).toFixed(1)} unit="MW" secondary="Current wind conditions" />
-        <KPI label="AVAILABILITY" value={summary.availability_pct.toFixed(1)} unit="%" secondary="Live operating state" accent={summary.availability_pct > 95 ? 'healthy' : 'warning'} />
-        <KPI label="FARM HEALTH" value={summary.fleet_health.toFixed(1)} secondary="Weighted score / 100" />
+        <KPI label="TURBINES" value={String(filteredSummary.turbines)} secondary={`${filteredSummary.online} online · ${filteredSummary.critical} critical`} />
+        <KPI label="ACTIVE POWER" value={(filteredSummary.current_power_kw / 1000).toFixed(1)} unit="MW" trend={powerDeviation > 0 ? 'up' : 'down'} trendValue={`${powerDeviation.toFixed(1)}% vs expected`} />
+        <KPI label="EXPECTED POWER" value={(filteredSummary.expected_power_kw / 1000).toFixed(1)} unit="MW" secondary="Current wind conditions" />
+        <KPI label="AVAILABILITY" value={filteredSummary.availability_pct.toFixed(1)} unit="%" secondary="Live operating state" accent={filteredSummary.availability_pct > 95 ? 'healthy' : 'warning'} />
+        <KPI label="FARM HEALTH" value={filteredSummary.fleet_health.toFixed(1)} secondary="Weighted score / 100" />
         <KPI label="ENERGY LOSS" value={energyLoss.toFixed(1)} unit="MWh" secondary="Estimated daily loss" accent="degraded" />
       </section>
 
@@ -246,8 +277,15 @@ export function Overview() {
       {/* 3. GIS MAP AND ALERTS */}
       <section className={styles.twoColumnMapAlerts}>
         <Card padding="none" className={styles.mapCard}>
-          <div className={styles.mapHeader}>
+          <div className={styles.mapHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 className="text-section-heading">Live GIS Map</h3>
+            <button 
+              onClick={() => setMapFitTrigger(Date.now().toString())}
+              className="text-tiny text-brand"
+              style={{ background: 'transparent', border: '1px solid var(--border)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              Reset Map View
+            </button>
           </div>
           <div className={styles.gisMapContainer}>
             <MapContainer center={[22.5, 75.5]} zoom={6} style={{ height: '100%', width: '100%', zIndex: 1 }} zoomControl={true}>
@@ -256,11 +294,10 @@ export function Overview() {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 className="map-tiles"
               />
-              <MapBounds fleet={filteredFleet} triggerToken={farmFilter} />
-              {filteredFleet.map((t, i) => {
+              <MapBounds fleet={filteredFleet} triggerToken={`${globalFarmFilter}-${mapFitTrigger}`} />
+              {filteredFleet.map(t => {
                 const lat = t.lat ?? 0;
                 const lon = t.lon ?? 0;
-
                 return (
                   <Marker key={t.id} position={[lat, lon]} icon={createWindmillIcon(t.status)}>
                     <Popup>
@@ -286,8 +323,8 @@ export function Overview() {
 
         <Card padding="compact" className={styles.recentAlertsCard}>
           <div className={styles.alertsHeader}>
-            <h3 className="text-section-heading">Recent Critical Alerts</h3>
-            <button className="text-tiny text-brand" onClick={() => navigate('/alerts')} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>View All</button>
+            <h3 className="text-section-heading">Recent Open Incidents</h3>
+            <button className="text-tiny text-brand" onClick={() => navigate('/events')} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>View All</button>
           </div>
           <div className={styles.alertsList}>
             {filteredFleet.filter(t => t.scenario).slice(0, 6).map(t => (
@@ -300,7 +337,7 @@ export function Overview() {
               </div>
             ))}
             {filteredFleet.filter(t => t.scenario).length === 0 && (
-              <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>No critical alerts active.</div>
+              <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>No critical incidents active.</div>
             )}
           </div>
         </Card>
@@ -324,7 +361,7 @@ export function Overview() {
               <div className={styles.envIconWrapper}><Compass size={20} /></div>
               <div className={styles.envContent}>
                 <span className={styles.envLabel}>Wind Vector</span>
-                <strong className={styles.envValue}>241° WSW</strong>
+                <strong className={styles.envValue}>{avgWindDir.toFixed(0)}° {getCardinal(avgWindDir)}</strong>
                 <span className={styles.envSubtext}>Steady Direction</span>
               </div>
             </div>
@@ -342,7 +379,7 @@ export function Overview() {
               <div className={styles.envIconWrapper}><Droplets size={20} /></div>
               <div className={styles.envContent}>
                 <span className={styles.envLabel}>Humidity</span>
-                <strong className={styles.envValue}>61% RH</strong>
+                <strong className={styles.envValue}>{avgHumidity.toFixed(0)}% RH</strong>
                 <span className={styles.envSubtext}>Low Condensation</span>
               </div>
             </div>
@@ -351,7 +388,7 @@ export function Overview() {
               <div className={styles.envIconWrapper}><Gauge size={20} /></div>
               <div className={styles.envContent}>
                 <span className={styles.envLabel}>Air Density</span>
-                <strong className={styles.envValue}>1.225 kg/m³</strong>
+                <strong className={styles.envValue}>{airDensity.toFixed(3)} kg/m³</strong>
                 <span className={styles.envSubtext}>ISA Standard</span>
               </div>
             </div>
@@ -360,7 +397,7 @@ export function Overview() {
               <div className={styles.envIconWrapper}><Activity size={20} /></div>
               <div className={styles.envContent}>
                 <span className={styles.envLabel}>Turbulence</span>
-                <strong className={styles.envValue}>8.4% I<sub>ref</sub></strong>
+                <strong className={styles.envValue}>{turbulence.toFixed(1)}% I<sub>ref</sub></strong>
                 <span className={styles.envSubtext}>Class A Airflow</span>
               </div>
             </div>
@@ -371,7 +408,7 @@ export function Overview() {
           <h3 className="text-card-heading mb-4">Overall WindFarm Health</h3>
           <div className={styles.mockHealthChart}>
             <div className={styles.healthScore}>
-              <strong style={{ fontSize: '48px', color: 'var(--status-healthy)', lineHeight: 1 }}>{summary.fleet_health.toFixed(1)}</strong>
+              <strong style={{ fontSize: '48px', color: 'var(--status-healthy)', lineHeight: 1 }}>{filteredSummary.fleet_health.toFixed(1)}</strong>
               <span className="text-muted" style={{ fontSize: '13px', marginTop: '4px' }}>Weighted Score / 100</span>
             </div>
             <div style={{ flex: 1, paddingLeft: '24px' }}>

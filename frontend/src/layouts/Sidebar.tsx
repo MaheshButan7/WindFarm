@@ -23,9 +23,9 @@ const navItems = [
   { path: '/', label: 'Overview', icon: LayoutDashboard },
   { path: '/turbines', label: 'Turbines', icon: Wind },
   { path: '/analytics', label: 'Analytics', icon: LineChart },
-  { path: '/alerts', label: 'Events', icon: BellRing },
+  { path: '/events', label: 'Events', icon: BellRing },
   { path: '/maintenance', label: 'Maintenance', icon: Wrench },
-  { path: '/copilot', label: 'Intelligence', icon: Bot },
+  { path: '/copilot', label: 'AI Insights', icon: Bot },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

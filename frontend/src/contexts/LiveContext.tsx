@@ -6,6 +6,8 @@ interface LiveContextType {
   fleet: TurbineData[];
   summary: FleetSummary | null;
   loading: boolean;
+  globalFarmFilter: string;
+  setGlobalFarmFilter: (f: string) => void;
   refresh: () => Promise<void>;
 }
 
@@ -15,6 +17,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [fleet, setFleet] = useState<TurbineData[]>([]);
   const [summary, setSummary] = useState<FleetSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [globalFarmFilter, setGlobalFarmFilter] = useState('All Farms');
 
   useEffect(() => {
     const update = () => {
@@ -38,7 +41,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <LiveContext.Provider value={{ fleet, summary, loading, refresh: mockRefresh }}>
+    <LiveContext.Provider value={{ fleet, summary, loading, globalFarmFilter, setGlobalFarmFilter, refresh: mockRefresh }}>
       {children}
     </LiveContext.Provider>
   );

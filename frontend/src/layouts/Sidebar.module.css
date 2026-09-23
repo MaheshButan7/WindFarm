@@ -38,13 +38,13 @@
 }
 
 .brandText strong {
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .brandText span {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
 }
 
@@ -85,7 +85,7 @@
 
 .label {
   margin-left: 12px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
 }
 
@@ -119,4 +119,19 @@
 .toggleBtn:hover {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .sidebar:not(.collapsed) {
+    position: absolute;
+    height: 100%;
+    z-index: 100;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.2);
+  }
+  .sidebar.collapsed {
+    width: 64px;
+  }
+  .brand {
+    padding: 0 12px;
+  }
 }

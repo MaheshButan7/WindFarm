@@ -48,6 +48,11 @@
   cursor: pointer;
 }
 
+.filterSelect option {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
 .addBtn {
   display: flex;
   align-items: center;
@@ -61,6 +66,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s;
+  margin-left: auto;
 }
 
 .addBtn:hover {

@@ -66,78 +66,80 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
   return (
     <div className={styles.incidentsLayout}>
       {/* LEFT: Incident List */}
-      <div className={styles.listPanel}>
-        {incidents.map(inc => (
-          <div 
-            key={inc.id} 
-            className={`${styles.eventRow} ${selectedId === inc.id ? styles.selected : ''}`}
-            onClick={() => setSelectedId(inc.id)}
-            style={selectedId === inc.id ? { borderLeft: '4px solid var(--brand-primary)' } : {}}
-            onMouseLeave={() => setMenuOpenId(null)}
-          >
-            <div className={styles.rowCol}>
-              <span className={styles.rowLabel}>Time</span>
-              <span className={styles.rowValue}>{new Date(inc.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-            <div className={styles.rowCol}>
-              <span className={styles.rowLabel}>Asset</span>
-              <span className={styles.rowValue}>{inc.turbineId}</span>
-            </div>
-            <div className={styles.rowCol}>
-              <span className={styles.rowLabel}>Component</span>
-              <span className={styles.rowValue}>{inc.component}</span>
-            </div>
-            <div className={styles.rowCol}>
-              <span className={styles.rowLabel}>Event</span>
-              <span className={styles.rowTitle}>{inc.title}</span>
-              <span className={styles.rowSubtitle}>
-                {inc.relatedAlarmIds.length} related alarm{inc.relatedAlarmIds.length !== 1 ? 's' : ''} · {inc.evidence.length} signals · {inc.impact ? inc.impact.performanceDeviationPct.toFixed(1) + '% prod impact' : ''}
-              </span>
-            </div>
-            <div className={styles.rowCol}>
-              <span className={styles.rowLabel}>Severity</span>
-              <span><Pill variant={inc.severity.toLowerCase() as any}>{inc.severity}</Pill></span>
-            </div>
-            <div className={styles.rowCol}>
-              <span className={styles.rowLabel}>Risk</span>
-              <span className={styles.rowValue} style={{ color: inc.risk > 80 ? 'var(--status-critical)' : 'inherit' }}>
-                {Math.round(inc.risk)}%
-              </span>
-            </div>
-            <div className={styles.rowCol}>
-              <span className={styles.rowLabel}>Status</span>
-              <span><Pill variant={inc.status === 'OPEN' ? 'warning' : inc.status === 'INVESTIGATING' ? 'info' : 'neutral'}>{inc.status}</Pill></span>
-            </div>
-            
-            {/* Context Menu Icon */}
-            <div className={styles.actionMenu} onClick={(e) => handleMenuClick(e, inc.id)}>
-              ⋮
-            </div>
-
-            {/* Dropdown Menu */}
-            {menuOpenId === inc.id && (
-              <div className={styles.contextMenu} onClick={e => e.stopPropagation()}>
-                <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Open Event')}>Open Event</button>
-                <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Open Turbine')}>Open Turbine</button>
-                <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'View Analytics')}>View Analytics</button>
-                <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Ask Intelligence')}>Ask Intelligence</button>
-                <div className={styles.menuDivider}></div>
+      <div className={styles.rawTableCard}>
+        <table className={styles.rawTable}>
+          <thead>
+            <tr>
+              <th>TIME</th>
+              <th>ASSET</th>
+              <th>COMPONENT</th>
+              <th>EVENT</th>
+              <th>SEVERITY</th>
+              <th>RISK</th>
+              <th>STATUS</th>
+              <th style={{ width: '40px' }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {incidents.map(inc => (
+              <tr 
+                key={inc.id} 
+                className={selectedId === inc.id ? styles.selectedRow : ''}
+                onClick={() => setSelectedId(inc.id)}
+                style={{ cursor: 'pointer', background: selectedId === inc.id ? 'var(--bg-secondary)' : '' }}
+                onMouseLeave={() => setMenuOpenId(null)}
+              >
+                <td style={selectedId === inc.id ? { boxShadow: 'inset 3px 0 0 0 var(--brand-primary)' } : {}}>
+                  {new Date(inc.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </td>
+                <td><strong>{inc.turbineId}</strong></td>
+                <td>{inc.component}</td>
+                <td>
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px' }}>{inc.title}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {inc.relatedAlarmIds.length} related alarm{inc.relatedAlarmIds.length !== 1 ? 's' : ''} · {inc.evidence.length} signals · {inc.impact ? inc.impact.performanceDeviationPct.toFixed(1) + '% prod impact' : ''}
+                  </div>
+                </td>
+                <td><Pill variant={inc.severity.toLowerCase() as any}>{inc.severity}</Pill></td>
+                <td style={{ color: inc.risk > 80 ? 'var(--status-critical)' : 'inherit', fontWeight: 500 }}>
+                  {Math.round(inc.risk)}%
+                </td>
+                <td><Pill variant={inc.status === 'OPEN' ? 'warning' : inc.status === 'INVESTIGATING' ? 'info' : 'neutral'}>{inc.status}</Pill></td>
                 
-                {inc.status === 'OPEN' && <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Acknowledge')}>Acknowledge</button>}
-                {inc.status === 'ACKNOWLEDGED' && <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Start Investigation')}>Start Investigation</button>}
-                {(inc.status === 'ACKNOWLEDGED' || inc.status === 'INVESTIGATING' || inc.status === 'OPEN') && <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Resolve')}>Resolve</button>}
-                {inc.status === 'RESOLVED' && <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Reopen')}>Reopen</button>}
-                <div className={styles.menuDivider}></div>
-                <button className={styles.menuItem} style={{ color: 'var(--status-critical)' }} onClick={() => handleAction(inc.id, 'Dismiss')}>Dismiss</button>
-              </div>
+                {/* Context Menu Icon */}
+                <td style={{ position: 'relative' }}>
+                  <div className={styles.actionMenu} onClick={(e) => handleMenuClick(e, inc.id)}>
+                    ⋮
+                  </div>
+                  {/* Dropdown Menu */}
+                  {menuOpenId === inc.id && (
+                    <div className={styles.contextMenu} onClick={e => e.stopPropagation()}>
+                      <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Open Event')}>Open Event</button>
+                      <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Open Turbine')}>Open Turbine</button>
+                      <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'View Analytics')}>View Analytics</button>
+                      <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Ask Intelligence')}>Ask Intelligence</button>
+                      <div className={styles.menuDivider}></div>
+                      
+                      {inc.status === 'OPEN' && <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Acknowledge')}>Acknowledge</button>}
+                      {inc.status === 'ACKNOWLEDGED' && <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Start Investigation')}>Start Investigation</button>}
+                      {(inc.status === 'ACKNOWLEDGED' || inc.status === 'INVESTIGATING' || inc.status === 'OPEN') && <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Resolve')}>Resolve</button>}
+                      {inc.status === 'RESOLVED' && <button className={styles.menuItem} onClick={() => handleAction(inc.id, 'Reopen')}>Reopen</button>}
+                      <div className={styles.menuDivider}></div>
+                      <button className={styles.menuItem} style={{ color: 'var(--status-critical)' }} onClick={() => handleAction(inc.id, 'Dismiss')}>Dismiss</button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {incidents.length === 0 && (
+              <tr>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
+                  No events match the selected filters.
+                </td>
+              </tr>
             )}
-          </div>
-        ))}
-        {incidents.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
-            No events match the selected filters.
-          </div>
-        )}
+          </tbody>
+        </table>
       </div>
 
       {/* RIGHT: Detail Panel Modal */}
@@ -148,29 +150,29 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
             <div className={styles.detailsPanel} style={{ border: 'none', borderRadius: 0, boxShadow: 'none' }}>
           <div className={styles.detailHeader}>
             <div className={styles.detailMeta} style={{ marginBottom: '8px' }}>
-              <span className="text-muted font-semibold uppercase text-tiny">Event Investigation</span>
+              <span className="text-muted font-semibold uppercase text-tiny" style={{ letterSpacing: '0.05em' }}>Event Investigation</span>
             </div>
             <h2 className={styles.detailTitle}>{selected.turbineId} — {selected.title}</h2>
             
-            <div style={{ display: 'flex', gap: '24px', marginTop: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '48px', marginTop: '20px', flexWrap: 'wrap' }}>
               <div>
-                <div className="text-tiny text-muted uppercase font-semibold">Severity</div>
+                <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Severity</div>
                 <div className="mt-1 font-semibold" style={{ color: selected.severity === 'CRITICAL' ? 'var(--status-critical)' : 'inherit' }}>{selected.severity}</div>
               </div>
               <div>
-                <div className="text-tiny text-muted uppercase font-semibold">Risk</div>
+                <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Risk</div>
                 <div className="mt-1 font-semibold" style={{ color: selected.risk > 80 ? 'var(--status-critical)' : 'inherit' }}>{Math.round(selected.risk)}%</div>
               </div>
               <div>
-                <div className="text-tiny text-muted uppercase font-semibold">Priority</div>
+                <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Priority</div>
                 <div className="mt-1 font-semibold">{selected.priority}</div>
               </div>
               <div>
-                <div className="text-tiny text-muted uppercase font-semibold">Status</div>
+                <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Status</div>
                 <div className="mt-1 font-semibold">{selected.status}</div>
               </div>
               <div>
-                <div className="text-tiny text-muted uppercase font-semibold">Assignee</div>
+                <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Assignee</div>
                 <div className="mt-1 font-semibold" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: 'var(--brand-primary)', display: 'inline-block' }}></div>
                   {selected.assignee || 'Unassigned'}
@@ -182,7 +184,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
           <div className={styles.detailBody}>
             {/* WHY THIS EVENT */}
             <div className={styles.detailSection}>
-              <h3>Why This Event?</h3>
+              <h3 className="text-section-heading">Why This Event?</h3>
               <div style={{ padding: '0 8px' }}>
                 <ul style={{ paddingLeft: '20px', margin: '0 0 16px 0', fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>
                   {selected.whyThisEvent.map((reason, idx) => (
@@ -194,7 +196,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
 
             {/* EVIDENCE */}
             <div className={styles.detailSection}>
-              <h3>Evidence</h3>
+              <h3 className="text-section-heading">Evidence</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 8px' }}>
                 {selected.evidence.map((e, idx) => {
                   const maxVal = Math.max(e.currentValue, e.baselineValue) * 1.2;
@@ -230,7 +232,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
 
             {/* CONTRIBUTING SIGNALS */}
             <div className={styles.detailSection}>
-              <h3>Contributing Signals</h3>
+              <h3 className="text-section-heading">Contributing Signals</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 8px' }}>
                 {selected.contributingSignals.map((sig, idx) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
@@ -246,7 +248,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
 
             {/* RELATED ALARMS */}
             <div className={styles.detailSection}>
-              <h3>Related Alarms</h3>
+              <h3 className="text-section-heading">Related Alarms</h3>
               <div style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {selected.relatedAlarmIds.map(rawName => (
                   <div 
@@ -273,7 +275,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
 
             {/* TIMELINE */}
             <div className={styles.detailSection}>
-              <h3>Timeline</h3>
+              <h3 className="text-section-heading">Timeline</h3>
               <div className={styles.timeline}>
                 {selected.timeline.map((tl, i) => (
                   <div key={i} className={`${styles.timelineItem} ${tl.isImportant ? styles.important : ''}`}>
@@ -287,7 +289,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
             {/* IMPACT */}
             {selected.impact && (
               <div className={styles.detailSection}>
-                <h3>Impact <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'normal', textTransform: 'none', marginLeft: '8px' }}>(Estimated)</span></h3>
+                <h3 className="text-section-heading">Impact <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'normal', textTransform: 'none', marginLeft: '8px' }}>(Estimated)</span></h3>
                 <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Lost Power</span>
@@ -307,7 +309,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
 
             {/* AI ASSESSMENT */}
             <div className={styles.detailSection}>
-              <h3>AI Assessment</h3>
+              <h3 className="text-section-heading">AI Assessment</h3>
               <div style={{ background: 'var(--bg-primary)', padding: '16px', borderRadius: '8px', borderLeft: '3px solid var(--status-info)' }}>
                 <div className="text-body" style={{ color: 'var(--text-primary)' }}>{selected.assessment}</div>
                 <div className="mt-2 text-tiny font-semibold" style={{ color: 'var(--text-muted)' }}>Confidence: {selected.confidence}%</div>
@@ -317,7 +319,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
             {/* RECOMMENDED CHECKS */}
             {selected.recommendedChecks && (
               <div className={styles.detailSection}>
-                <h3>Recommended Checks</h3>
+                <h3 className="text-section-heading">Recommended Checks</h3>
                 <div style={{ padding: '0 8px' }}>
                   <ul style={{ listStyleType: 'none', padding: 0, margin: '0 0 12px 0', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {selected.recommendedChecks.map((check, idx) => (
@@ -333,7 +335,7 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
 
             {/* ACTIVITY */}
             <div className={styles.detailSection}>
-              <h3>Activity</h3>
+              <h3 className="text-section-heading">Activity</h3>
               <div style={{ padding: '0 8px', display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
                 {selected.activity.map((act, idx) => (
                   <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -365,6 +367,9 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
             {selected.status === 'RESOLVED' && (
               <button className={styles.btnSecondary} onClick={() => handleAction(selected.id, 'Reopen')}>Reopen</button>
             )}
+            {(selected.status === 'OPEN' || selected.status === 'ACKNOWLEDGED') && (
+              <button className={styles.btnSecondary} style={{ color: 'var(--status-critical)', marginLeft: '8px' }} onClick={() => handleAction(selected.id, 'Dismiss')}>Dismiss</button>
+            )}
           </div>
         </div>
         </div>
@@ -394,33 +399,36 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
                 if (!alarm) return null;
                 return (
                   <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     <div>
-                      <div className="text-tiny text-muted uppercase font-semibold">Description</div>
-                      <div className="text-body mt-1">{alarm.displayName}</div>
+                      <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Description</div>
+                      <div className="text-body">{alarm.displayName}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: '24px' }}>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                       <div>
-                        <div className="text-tiny text-muted uppercase font-semibold">Turbine</div>
-                        <div className="text-body mt-1 font-semibold">{alarm.turbineId}</div>
+                        <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Turbine</div>
+                        <div className="text-body font-semibold">{alarm.turbineId}</div>
                       </div>
                       <div>
-                        <div className="text-tiny text-muted uppercase font-semibold">Component</div>
-                        <div className="text-body mt-1">{alarm.component}</div>
+                        <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Component</div>
+                        <div className="text-body">{alarm.component}</div>
+                      </div>
+                      
+                      <div>
+                        <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '6px' }}>Severity</div>
+                        <div><Pill variant={alarm.severity.toLowerCase() as any}>{alarm.severity}</Pill></div>
+                      </div>
+                      <div>
+                        <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '6px' }}>Current State</div>
+                        <div><Pill variant={alarm.state === 'Active' ? 'warning' : 'neutral'}>{alarm.state}</Pill></div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '24px' }}>
-                      <div>
-                        <div className="text-tiny text-muted uppercase font-semibold">Severity</div>
-                        <div className="mt-1"><Pill variant={alarm.severity.toLowerCase() as any}>{alarm.severity}</Pill></div>
-                      </div>
-                      <div>
-                        <div className="text-tiny text-muted uppercase font-semibold">Current State</div>
-                        <div className="mt-1"><Pill variant={alarm.state === 'Active' ? 'warning' : 'neutral'}>{alarm.state}</Pill></div>
-                      </div>
-                    </div>
-                    <hr style={{ border: 'none', borderBottom: '1px solid var(--border)', margin: '8px 0' }} />
+                    
+                    <hr style={{ border: 'none', borderBottom: '1px solid var(--border)', margin: '0' }} />
+                    
                     <div>
-                      <div className="text-tiny text-muted uppercase font-semibold mb-2">Occurrence</div>
+                      <div className="text-tiny text-muted uppercase font-semibold mb-2" style={{ letterSpacing: '0.05em' }}>Occurrence Details</div>
                       <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
                         <div>First detected</div>
                         <div style={{ color: 'var(--text-primary)' }}>{new Date(alarm.firstDetected).toLocaleString()}</div>
@@ -430,10 +438,12 @@ export function IncidentView({ incidents, operationalAlarms, onStatusChange, onO
                         <div style={{ color: 'var(--text-primary)' }}>{alarm.occurrences}</div>
                       </div>
                     </div>
+                    
                     <div>
-                      <div className="text-tiny text-muted uppercase font-semibold">Source</div>
-                      <div className="text-body mt-1">{alarm.source}</div>
+                      <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Source</div>
+                      <div className="text-body">{alarm.source}</div>
                     </div>
+                  </div>
                   </>
                 );
               })()}

@@ -11,6 +11,7 @@ import { Maintenance } from './pages/Maintenance';
 import { Turbines } from './pages/Turbines';
 import { Alerts } from './pages/Alerts';
 import { Analytics } from './pages/Analytics';
+import { FloatingCopilot } from './components/FloatingCopilot';
 
 export function App() {
   return (
@@ -21,11 +22,12 @@ export function App() {
           <Route path="/turbines" element={<Turbines />} />
           <Route path="/turbines/:id" element={<TurbineDetail />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/events" element={<Alerts />} />
           <Route path="/maintenance" element={<Maintenance />} />
           <Route path="/copilot" element={<Copilot />} />
         </Route>
       </Routes>
+      <FloatingCopilot />
     </LiveProvider>
   );
 }

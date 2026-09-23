@@ -3,6 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  height: 100%;
+  min-height: 110px;
 }
 
 .accent {
@@ -34,7 +36,7 @@
 }
 
 .unit {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -43,7 +45,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 4px;
+  margin-top: auto;
 }
 
 .trendUp, .textUp { color: var(--status-degraded); } /* usually orange for higher values, unless it's good. In industrial, higher risk/vib is bad. For power, higher is good. I will use standard colors for trends here, maybe generic */

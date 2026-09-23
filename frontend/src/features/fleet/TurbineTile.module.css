@@ -53,12 +53,12 @@
 }
 
 .healthLabel {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
 }
 
 .healthValue {
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   line-height: 1;
 }
@@ -85,7 +85,7 @@
 .metricRow {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .metricLabel {

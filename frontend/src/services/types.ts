@@ -184,11 +184,16 @@ export interface AlarmDefinition {
 export type Alert = IntelligentIncident;
 
 /**
- * An actionable recommendation for preventative maintenance.
+ * An actionable work order for the maintenance Kanban board.
  */
-export interface MaintenanceTask {
+export interface WorkOrder {
+  id: string;
   turbine_id: string;
-  risk: number;
+  farm_id: string;
+  title: string;
+  status: 'Pending' | 'Scheduled' | 'In Progress' | 'Completed';
+  priority: 'High' | 'Medium' | 'Low';
   component: string;
-  recommended_action: string;
+  assignee?: string;
+  scheduled_date?: string;
 }

@@ -51,17 +51,17 @@
 .sm {
   height: 32px;
   padding: 0 12px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .md {
   height: 38px;
   padding: 0 16px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .lg {
   height: 44px;
   padding: 0 20px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }

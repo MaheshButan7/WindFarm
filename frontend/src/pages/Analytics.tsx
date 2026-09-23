@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../components/Card';
 import { KPI } from '../components/KPI';
+import { useLive } from '../contexts/LiveContext';
 import { globalSimulator } from '../services/simulator';
 import { TurbineData } from '../services/types';
 import styles from './Analytics.module.css';
@@ -42,16 +43,16 @@ const getComputedVar = (varName: string) => {
 };
 
 export function Analytics() {
+  const { globalFarmFilter } = useLive();
   const [view, setView] = useState<'FLEET' | 'INDIVIDUAL'>('FLEET');
-  const [selectedFarm, setSelectedFarm] = useState('Overall');
   const [selectedId, setSelectedId] = useState('T04');
   const [turbine, setTurbine] = useState<TurbineData | undefined>(undefined);
   const [fleet, setFleet] = useState<TurbineData[]>(globalSimulator.getFleet());
   const [themeTick, setThemeTick] = useState(0);
 
   const analyticsFleet = useMemo(
-    () => selectedFarm === 'Overall' ? fleet : fleet.filter(t => t.farm_id === selectedFarm),
-    [fleet, selectedFarm]
+    () => globalFarmFilter === 'All Farms' ? fleet : fleet.filter(t => t.farm_id === globalFarmFilter),
+    [fleet, globalFarmFilter]
   );
 
   const analyticsSummary = useMemo(() => {
@@ -286,7 +287,7 @@ export function Analytics() {
       <>
         <div className={styles.kpiStrip}>
           <KPI label="FARM POWER" value={(analyticsSummary.current_power_kw / 1000).toFixed(2)} unit="MW" secondary={`${analyticsSummary.turbines} turbines`} />
-          <KPI label="FARM EXPECTED" value={(analyticsSummary.expected_power_kw / 1000).toFixed(2)} unit="MW" secondary={selectedFarm} />
+          <KPI label="FARM EXPECTED" value={(analyticsSummary.expected_power_kw / 1000).toFixed(2)} unit="MW" secondary={globalFarmFilter === 'All Farms' ? 'Overall' : globalFarmFilter} />
           <KPI label="AVAILABILITY" value={analyticsSummary.availability_pct.toFixed(1)} unit="%" secondary={`${analyticsSummary.online} online`} accent={analyticsSummary.availability_pct > 95 ? 'healthy' : 'warning'} />
           <KPI label="LOSS ESTIMATE" value={((analyticsSummary.expected_power_kw - analyticsSummary.current_power_kw) * 24 / 1000).toFixed(2)} unit="MWh" secondary="24h projection" accent="degraded" />
         </div>
@@ -294,7 +295,7 @@ export function Analytics() {
         <div className={styles.grid}>
           <Card className={styles.chartPlaceholder}>
             <h3 className="text-section-heading">Farm Health Distribution</h3>
-            <p className="text-muted text-tiny mt-1 mb-2">{selectedFarm} health distribution across {analyticsFleet.length} turbines</p>
+            <p className="text-muted text-tiny mt-1 mb-2">{globalFarmFilter === 'All Farms' ? 'Overall' : globalFarmFilter} health distribution across {analyticsFleet.length} turbines</p>
             <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
               <Doughnut data={doughnutData} options={doughnutOptions} />
             </div>
@@ -302,7 +303,7 @@ export function Analytics() {
 
           <Card className={styles.chartPlaceholder}>
             <h3 className="text-section-heading">Component Risk Distribution</h3>
-            <p className="text-muted text-tiny mt-1 mb-2">{selectedFarm} average risk percentages by subsystem</p>
+            <p className="text-muted text-tiny mt-1 mb-2">{globalFarmFilter === 'All Farms' ? 'Overall' : globalFarmFilter} average risk percentages by subsystem</p>
             <div style={{ flex: 1, width: '100%', position: 'relative', minHeight: 0 }}>
               <Radar data={radarData} options={radarOptions} />
             </div>
@@ -325,7 +326,7 @@ export function Analytics() {
             <div className={styles.heatmapHeader}>
               <div>
                 <h3 className="text-section-heading">Farm Risk & Anomaly Heatmap Matrix</h3>
-                <p className="text-muted text-tiny mt-1">{selectedFarm} risk across {analyticsFleet.length} turbines and six component subsystems</p>
+                <p className="text-muted text-tiny mt-1">{globalFarmFilter === 'All Farms' ? 'Overall' : globalFarmFilter} risk across {analyticsFleet.length} turbines and six component subsystems</p>
               </div>
               <div className={styles.heatmapLegend}>
                 <div className={styles.legendItem}>
@@ -637,24 +638,6 @@ export function Analytics() {
             <button className={view === 'FLEET' ? styles.activeTab : styles.tab} onClick={() => setView('FLEET')}>Farm Analytics</button>
             <button className={view === 'INDIVIDUAL' ? styles.activeTab : styles.tab} onClick={() => setView('INDIVIDUAL')}>Individual Analytics</button>
           </div>
-          <select
-            aria-label="Select farm"
-            value={selectedFarm}
-            onChange={e => {
-              const farm = e.target.value;
-              setSelectedFarm(farm);
-              if (farm !== 'Overall') {
-                const firstTurbine = fleet.find(t => t.farm_id === farm);
-                if (firstTurbine) setSelectedId(firstTurbine.id);
-              }
-            }}
-            className={styles.select}
-          >
-            <option value="Overall">Overall</option>
-            <option value="Farm A">Farm A</option>
-            <option value="Farm B">Farm B</option>
-            <option value="Farm C">Farm C</option>
-          </select>
           {view === 'INDIVIDUAL' && (
             <select value={selectedId} onChange={e => setSelectedId(e.target.value)} className={styles.select}>
               {analyticsFleet.map(t => <option key={t.id} value={t.id}>{t.id}</option>)}

@@ -56,43 +56,43 @@ export function OperationalAlarmsView({ alarms, onOpenIncident }: Props) {
 
       {selectedAlarm && (
         <div className={styles.modalOverlay} onClick={() => setSelectedAlarm(null)}>
-          <div className={styles.modalPanel} onClick={e => e.stopPropagation()} style={{ padding: '24px', position: 'relative' }}>
+          <div className={styles.modalPanel} onClick={e => e.stopPropagation()} style={{ width: '560px', position: 'relative' }}>
             <button className={styles.modalClose} onClick={() => setSelectedAlarm(null)}>×</button>
-            <div className={styles.drawerHeader} style={{ padding: 0, border: 'none', paddingBottom: '16px' }}>
-              <div>
-                <div className="text-tiny text-muted uppercase font-semibold">Operational Alarm</div>
-                <h3 className="text-section-heading mt-1">{selectedAlarm.rawName}</h3>
-              </div>
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border)' }}>
+              <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em' }}>Operational Alarm</div>
+              <h3 className="text-section-heading mt-1" style={{ fontSize: '20px' }}>{selectedAlarm.rawName}</h3>
             </div>
             
-            <div className={styles.drawerBody}>
+            <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto' }}>
               <div>
-                <div className="text-tiny text-muted uppercase font-semibold">Description</div>
-                <div className="text-body mt-1">{selectedAlarm.displayName}</div>
+                <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Description</div>
+                <div className="text-body">{selectedAlarm.displayName}</div>
               </div>
-              <div style={{ display: 'flex', gap: '24px' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 <div>
-                  <div className="text-tiny text-muted uppercase font-semibold">Turbine</div>
-                  <div className="text-body mt-1 font-semibold">{selectedAlarm.turbineId}</div>
+                  <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Turbine</div>
+                  <div className="text-body font-semibold">{selectedAlarm.turbineId}</div>
                 </div>
                 <div>
-                  <div className="text-tiny text-muted uppercase font-semibold">Component</div>
-                  <div className="text-body mt-1">{selectedAlarm.component}</div>
+                  <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Component</div>
+                  <div className="text-body">{selectedAlarm.component}</div>
+                </div>
+                
+                <div>
+                  <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '6px' }}>Severity</div>
+                  <div><Pill variant={selectedAlarm.severity.toLowerCase() as any}>{selectedAlarm.severity}</Pill></div>
+                </div>
+                <div>
+                  <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '6px' }}>Current State</div>
+                  <div><Pill variant={selectedAlarm.state === 'Active' ? 'warning' : 'neutral'}>{selectedAlarm.state}</Pill></div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '24px' }}>
-                <div>
-                  <div className="text-tiny text-muted uppercase font-semibold">Severity</div>
-                  <div className="mt-1"><Pill variant={selectedAlarm.severity.toLowerCase() as any}>{selectedAlarm.severity}</Pill></div>
-                </div>
-                <div>
-                  <div className="text-tiny text-muted uppercase font-semibold">Current State</div>
-                  <div className="mt-1"><Pill variant={selectedAlarm.state === 'Active' ? 'warning' : 'neutral'}>{selectedAlarm.state}</Pill></div>
-                </div>
-              </div>
-              <hr style={{ border: 'none', borderBottom: '1px solid var(--border)', margin: '8px 0' }} />
+              
+              <hr style={{ border: 'none', borderBottom: '1px solid var(--border)', margin: '0' }} />
+              
               <div>
-                <div className="text-tiny text-muted uppercase font-semibold mb-2">Occurrence</div>
+                <div className="text-tiny text-muted uppercase font-semibold mb-2" style={{ letterSpacing: '0.05em' }}>Occurrence Details</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
                   <div>First detected</div>
                   <div style={{ color: 'var(--text-primary)' }}>{new Date(selectedAlarm.firstDetected).toLocaleString()}</div>
@@ -102,19 +102,20 @@ export function OperationalAlarmsView({ alarms, onOpenIncident }: Props) {
                   <div style={{ color: 'var(--text-primary)' }}>{selectedAlarm.occurrences}</div>
                 </div>
               </div>
+              
               <div>
-                <div className="text-tiny text-muted uppercase font-semibold">Source</div>
-                <div className="text-body mt-1">{selectedAlarm.source}</div>
+                <div className="text-tiny text-muted uppercase font-semibold" style={{ letterSpacing: '0.05em', marginBottom: '4px' }}>Source</div>
+                <div className="text-body">{selectedAlarm.source}</div>
               </div>
               
               {selectedAlarm.parentIncidentId && (
-                <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', borderLeft: '3px solid var(--brand-primary)', cursor: 'pointer' }}
+                <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', borderLeft: '3px solid var(--brand-primary)', cursor: 'pointer', marginTop: '8px' }}
                      onClick={() => {
                        if (onOpenIncident) {
                          onOpenIncident(selectedAlarm.parentIncidentId!);
                        }
                      }}>
-                  <div className="text-tiny uppercase font-semibold" style={{ color: 'var(--brand-primary)' }}>Parent Incident</div>
+                  <div className="text-tiny uppercase font-semibold" style={{ color: 'var(--brand-primary)', letterSpacing: '0.05em' }}>Parent Incident</div>
                   <div className="text-body font-semibold mt-1" style={{ color: 'var(--text-primary)' }}>{selectedAlarm.turbineId} — System Anomaly</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>Click to view correlated intelligence</div>
                 </div>

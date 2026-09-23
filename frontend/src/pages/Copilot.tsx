@@ -2,129 +2,117 @@ import React, { useState } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import styles from './Copilot.module.css';
-import { Bot, Send, Lightbulb } from 'lucide-react';
-import { queryCopilot } from '../services/copilot';
+import { Lightbulb } from 'lucide-react';
+import { globalSimulator } from '../services/simulator';
 
 export function Copilot() {
-  const [query, setQuery] = useState('Why is T04 underperforming?');
-  const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<any>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<any>(null);
 
-  const ask = async () => {
-    if (!query) return;
-    setLoading(true);
-    try {
-      const data = await queryCopilot(query);
-      setResponse(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  React.useEffect(() => {
+    const update = () => {
+      const q = globalSimulator.getIncidents().filter(i => i.status === 'OPEN' && i.eventType === 'Predictive');
+      setSuggestions(q);
+    };
+    update();
+    const unsub = globalSimulator.subscribe(update);
+    return () => unsub();
+  }, []);
+
+
 
   return (
     <div className={styles.container}>
 
 
       <div className={styles.grid}>
-        <div className={styles.leftPanel}>
-          <h2 className="text-section-heading mb-4">AI Suggestions</h2>
-          <Card className={styles.suggestionCard}>
+        {suggestions.map((suggestion, i) => (
+          <Card key={suggestion.id} className={styles.suggestionCard} onClick={() => setSelectedSuggestion(suggestion)} style={{ cursor: 'pointer' }}>
             <div className={styles.suggestionHeader}>
               <Lightbulb size={20} className="text-brand" />
-              <h3 className="text-card-heading">Efficiency Opportunity</h3>
+              <h3 className="text-card-heading">{suggestion.turbineId} — {suggestion.component}</h3>
             </div>
             <div className={styles.suggestionBody}>
-              <p><strong>T03 — Yaw Misalignment</strong></p>
               <ul className={styles.suggestionList}>
-                <li><strong>Current yaw error:</strong> 16°</li>
-                <li><strong>Estimated impact:</strong> 4.7% production reduction</li>
-                <li><strong>Evidence:</strong> Yaw error persistent for 42 minutes.</li>
+                <li><strong>Risk:</strong> {Math.round(suggestion.risk)}%</li>
+                <li><strong>AI Insight:</strong> {suggestion.assessment}</li>
               </ul>
               <div className={styles.suggestionAction}>
-                <strong>Suggestion:</strong> Inspect/calibrate yaw alignment.
-                <span className={styles.confidence}>Confidence: 93%</span>
+                <strong>Action:</strong> {suggestion.recommendedChecks?.[0] || 'Inspect component'}
+                <span className={styles.confidence}>Type: {suggestion.eventType}</span>
               </div>
             </div>
           </Card>
-        </div>
-
-        <div className={styles.rightPanel}>
-          <Card className={styles.chatCard} padding="none">
-            <div className={styles.chatHeader}>
-              <Bot size={20} className="text-brand" />
-              <span className="text-card-heading">AI Copilot</span>
-            </div>
-            
-            <div className={styles.chatBody}>
-              {response && (
-                <>
-                  <div className={styles.userBubble}>{query}</div>
-                  <div className={styles.botBubble}>
-                    <p className={styles.finding}>{response.finding}</p>
-                    
-                    <div className={styles.structuredData}>
-                      {response.evidence && response.evidence.length > 0 && (
-                        <div>
-                          <strong className="text-muted">Evidence</strong>
-                          <ul className={styles.evidenceList}>
-                            {response.evidence.map((e: string, i: number) => <li key={i}>{e}</li>)}
-                          </ul>
-                        </div>
-                      )}
-                      
-                      {response.impact && (
-                        <div>
-                          <strong className="text-muted">Impact</strong>
-                          <p>{response.impact}</p>
-                        </div>
-                      )}
-
-                      {response.risk && (
-                        <div>
-                          <strong className="text-muted">Risk</strong>
-                          <p>{response.risk}</p>
-                        </div>
-                      )}
-
-                      {response.historical && (
-                        <div>
-                          <strong className="text-muted">Historical Context</strong>
-                          <p>{response.historical}</p>
-                        </div>
-                      )}
-
-                      {response.recommendation && (
-                        <div className={styles.recommendationBox}>
-                          <strong className="text-brand">Recommendation</strong>
-                          <p>{response.recommendation}</p>
-                          <span className={styles.confidenceBadge}>Confidence {response.confidence}%</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-              {loading && <div className="text-muted p-4">Analyzing context...</div>}
-            </div>
-
-            <div className={styles.chatInputArea}>
-              <input 
-                type="text" 
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                className={styles.chatInput}
-                onKeyDown={e => e.key === 'Enter' && ask()}
-                placeholder="Ask about turbines, alerts, or performance..."
-              />
-              <Button onClick={ask} disabled={loading || !query} variant="primary">
-                {loading ? 'Thinking...' : <Send size={16} />}
-              </Button>
-            </div>
+        ))}
+        {suggestions.length === 0 && (
+          <Card className={styles.suggestionCard}>
+            <p className="text-muted">No pending suggestions.</p>
           </Card>
-        </div>
+        )}
       </div>
+
+      {/* MODAL FOR AI SUGGESTION DETAILS */}
+      {selectedSuggestion && (
+        <div className={styles.modalOverlay} onClick={() => setSelectedSuggestion(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2 className="text-section-heading">Detailed AI Analysis: {selectedSuggestion.turbineId}</h2>
+              <button className={styles.closeBtn} onClick={() => setSelectedSuggestion(null)}>&times;</button>
+            </div>
+            <div className={styles.modalContent}>
+              <p style={{ marginBottom: '16px' }}><strong>Component:</strong> {selectedSuggestion.component}</p>
+              
+              <div className={styles.insightBlock}>
+                <h4>AI Assessment</h4>
+                <p>{selectedSuggestion.assessment}</p>
+                <p style={{ marginTop: '8px', color: 'var(--text-muted)' }}>{selectedSuggestion.whyThisEvent?.join(' ')}</p>
+              </div>
+
+              <div className={styles.insightBlock}>
+                <h4>System Impact & Production</h4>
+                <ul style={{ listStyle: 'disc', paddingLeft: '20px', marginTop: '8px' }}>
+                  <li><strong>Current Power Loss:</strong> {selectedSuggestion.impact?.currentLostPowerKw?.toFixed(0)} kW</li>
+                  <li><strong>Estimated Daily Loss:</strong> {selectedSuggestion.impact?.estimatedDailyLossMwh?.toFixed(1)} MWh</li>
+                  <li><strong>Performance Deviation:</strong> {selectedSuggestion.impact?.performanceDeviationPct?.toFixed(1)}%</li>
+                </ul>
+              </div>
+
+              <div className={styles.insightBlock}>
+                <h4>Supporting Evidence</h4>
+                <table className={styles.table} style={{ marginTop: '8px' }}>
+                  <thead>
+                    <tr>
+                      <th>Parameter</th>
+                      <th>Current</th>
+                      <th>Baseline</th>
+                      <th>Deviation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedSuggestion.evidence?.map((e: any, i: number) => (
+                      <tr key={i}>
+                        <td>{e.parameter}</td>
+                        <td>{e.currentValue} {e.unit}</td>
+                        <td>{e.baselineValue} {e.unit}</td>
+                        <td style={{ color: e.trend === 'up' ? 'var(--status-critical)' : 'var(--status-warning)' }}>
+                          {e.trend === 'up' ? '▲' : '▼'} {Math.abs(e.deviationPct)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className={styles.insightBlock} style={{ borderLeftColor: 'var(--status-healthy)' }}>
+                <h4>Recommended Checks</h4>
+                <ul style={{ paddingLeft: '20px' }}>
+                  {selectedSuggestion.recommendedChecks?.map((c: string, i: number) => <li key={i}>{c}</li>)}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

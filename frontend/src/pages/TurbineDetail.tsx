@@ -22,32 +22,20 @@ export function TurbineDetail() {
     return () => { unsubscribe(); };
   }, [id]);
 
-  if (!t) return <div className="text-muted p-8">Loading turbine analysis...</div>;
+  if (!t) return <div className="empty-state"><div className="spinner" /><div>Loading turbine analysis...</div></div>;
 
   const f = t.features;
   const cmp = ['gearbox', 'generator', 'bearing', 'yaw', 'pitch', 'electrical'];
 
-  const orbClass = t.status === 'CRITICAL' || f.health_score < 40
-    ? styles.orbCritical
-    : t.status === 'DEGRADED' || f.health_score < 60
-      ? styles.orbDegraded
-      : t.status === 'WARNING' || f.health_score < 80
-        ? styles.orbWarning
-        : styles.orbNormal;
-
   return (
     <div className={styles.container}>
-      <div className={styles.hero}>
-        <div></div>
-        <div className={`${styles.orb} ${orbClass}`}>
-          <strong style={{ color: t.status === 'CRITICAL' || f.health_score < 40 ? 'var(--status-critical)' : undefined }}>
-            {Math.round(f.health_score)}
-          </strong>
-          <span>HEALTH</span>
-        </div>
-      </div>
-
       <div className={styles.kpiStrip}>
+        <KPI 
+          label="OVERALL HEALTH" 
+          value={Math.round(f.health_score).toString()} 
+          secondary={`Status: ${t.status}`} 
+          accent={f.health_score < 40 ? 'critical' : f.health_score < 60 ? 'warning' : f.health_score < 80 ? 'warning' : 'healthy'} 
+        />
         <KPI label="ACTIVE POWER" value={(t.telemetry.power_kw / 1000).toFixed(2)} unit="MW" secondary={`Expected ${(t.telemetry.expected_power_kw / 1000).toFixed(2)} MW`} />
         <KPI label="FAILURE RISK" value={Math.round(f.overall_failure_risk).toString()} unit="%" secondary="Synthetic component model" accent={f.overall_failure_risk > 75 ? 'critical' : 'warning'} />
         <KPI label="ANOMALY SCORE" value={Math.round(f.anomaly_score).toString()} secondary="Multivariate score / 100" />

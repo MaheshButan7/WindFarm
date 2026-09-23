@@ -8,10 +8,9 @@ import { Search, Filter, Plus, X } from 'lucide-react';
 import { TurbineTile } from '../features/fleet/TurbineTile';
 
 export function Turbines() {
-  const { fleet } = useLive();
+  const { fleet, loading, globalFarmFilter } = useLive();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [farmFilter, setFarmFilter] = useState('All Farms');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [showModal, setShowModal] = useState(false);
 
@@ -25,7 +24,7 @@ export function Turbines() {
 
   const rows = useMemo(() => {
     return fleet
-      .filter(t => (farmFilter === 'All Farms' || t.farm_id === farmFilter))
+      .filter(t => (globalFarmFilter === 'All Farms' || t.farm_id === globalFarmFilter))
       .filter(t => (statusFilter === 'All Status' || t.status === statusFilter.toUpperCase()))
       .filter(t => t.id.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => {
@@ -33,15 +32,17 @@ export function Turbines() {
         if (rankDiff !== 0) return rankDiff;
         return a.id.localeCompare(b.id);
       });
-  }, [fleet, search, farmFilter, statusFilter]);
+  }, [fleet, search, globalFarmFilter, statusFilter]);
 
   const onlineCount = fleet.filter(t => t.status !== 'OFFLINE').length;
   const criticalCount = fleet.filter(t => t.status === 'CRITICAL').length;
 
+  if (loading || !fleet) return <div className="empty-state"><div className="spinner" /><div>Loading fleet data...</div></div>;
+
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <div className={styles.controls} style={{ flex: 1, justifyContent: 'flex-start' }}>
+      <div className={styles.header} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px' }}>
+        <div className={styles.controls} style={{ width: '100%' }}>
           <div className={styles.searchBox}>
             <Search size={16} className={styles.searchIcon} />
             <input 
@@ -52,15 +53,7 @@ export function Turbines() {
               className={styles.searchInput}
             />
           </div>
-          <div className={styles.filterBox}>
-            <Filter size={16} className={styles.searchIcon} />
-            <select value={farmFilter} onChange={e => setFarmFilter(e.target.value)} className={styles.filterSelect}>
-              <option>All Farms</option>
-              <option>Farm A</option>
-              <option>Farm B</option>
-              <option>Farm C</option>
-            </select>
-          </div>
+
           <div className={styles.filterBox}>
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={styles.filterSelect}>
               <option>All Status</option>

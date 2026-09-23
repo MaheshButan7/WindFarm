@@ -12,170 +12,138 @@
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 24px;
-  flex: 1;
-}
-
-/* LEFT PANEL (SUGGESTIONS) */
-.leftPanel {
-  display: flex;
-  flex-direction: column;
 }
 
 .suggestionCard {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 24px;
+  padding: 32px;
 }
 
 .suggestionHeader {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .suggestionBody {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  font-size: 14px;
+  gap: 20px;
+  font-size: var(--font-size-base);
   color: var(--text-primary);
 }
 
 .suggestionList {
   margin: 0;
-  padding-left: 16px;
-  color: var(--text-muted);
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-secondary);
 }
 
 .suggestionList li {
-  margin-bottom: 4px;
+  margin: 0;
+  line-height: 1.5;
 }
 
 .suggestionAction {
-  margin-top: 8px;
-  padding: 12px;
-  background: var(--bg-secondary);
-  border-radius: 6px;
-  border-left: 3px solid var(--brand-primary);
+  margin-top: 4px;
+  padding: 16px 20px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 4px solid var(--brand-primary);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .confidence {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
   font-weight: 500;
-}
-
-
-/* RIGHT PANEL (CHAT) */
-.rightPanel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.chatCard {
-  display: flex;
-  flex-direction: column;
-  height: 600px;
-}
-
-.chatHeader {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}/* MODAL STYLES */
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--bg-secondary);
+  justify-content: center;
 }
 
-.chatBody {
-  flex: 1;
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: min(700px, 90vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+}
+
+.modalHeader {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.closeBtn:hover {
+  color: var(--text-primary);
+}
+
+.modalContent {
   padding: 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
-.userBubble {
-  align-self: flex-end;
-  background: var(--brand-primary);
-  color: #0F172A;
-  padding: 12px 16px;
-  border-radius: 16px 16px 0 16px;
-  max-width: 80%;
-  font-size: 14px;
+.insightBlock {
+  padding-left: 16px;
+  border-left: 3px solid var(--brand-primary);
 }
 
-.botBubble {
-  align-self: flex-start;
-  background: var(--bg-secondary);
+.insightBlock h4 {
+  margin-bottom: 8px;
   color: var(--text-primary);
-  padding: 16px;
-  border-radius: 16px 16px 16px 0;
-  max-width: 85%;
-  font-size: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
-.finding {
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.structuredData {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 13px;
 }
-
-.evidenceList {
-  margin: 4px 0 0;
-  padding-left: 16px;
-}
-
-.recommendationBox {
-  background: var(--surface);
-  border: 1px solid var(--brand-primary);
-  padding: 12px;
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-.confidenceBadge {
-  font-size: 11px;
-  font-weight: 600;
+.table th {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
   color: var(--text-muted);
+  font-weight: 600;
 }
-
-.chatInputArea {
-  padding: 16px 24px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 12px;
-  background: var(--bg-secondary);
-}
-
-.chatInput {
-  flex: 1;
-  height: 40px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: var(--surface);
+.table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
   color: var(--text-primary);
-  outline: none;
 }
+
